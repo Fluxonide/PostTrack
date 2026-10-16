@@ -205,7 +205,7 @@ export const TrackingCard: React.FC<TrackingCardProps> = ({
       )}
 
       {/* 3 Metric Stat Cards */}
-      <div className="modal-stats" style={{ gridTemplateColumns: "repeat(3, 1fr)", marginBottom: 28 }}>
+      <div className="modal-stats" style={{ gridTemplateColumns: "repeat(2, 1fr)", marginBottom: 28 }}>
         <div className="stat-card">
           <div className="stat-num" style={{ fontSize: 15, wordBreak: "break-word" }}>
             {result.origin && result.destination ? (
@@ -226,11 +226,6 @@ export const TrackingCard: React.FC<TrackingCardProps> = ({
             {etaText || "Scheduled"}
           </div>
           <div className="stat-label">Expected Delivery</div>
-        </div>
-
-        <div className="stat-card">
-          <div className="stat-num">{result.events.length}</div>
-          <div className="stat-label">Total Scan Events</div>
         </div>
       </div>
 
