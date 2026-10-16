@@ -1,21 +1,10 @@
 import React, { useState, useEffect } from "react";
 import confetti from "canvas-confetti";
-import {
-  FiCopy,
-  FiCheck,
-  FiShare2,
-  FiRefreshCw,
-  FiMapPin,
-  FiCalendar,
-  FiTag,
-  FiExternalLink,
-  FiTruck,
-} from "react-icons/fi";
 import type { TrackingResult } from "../carriers/types";
-import { STATUS_CONFIG } from "../lib/status";
-import { formatEta } from "../lib/dates";
+import { formatCarrierDate, formatEta, displayCarrierDate } from "../lib/dates";
+import { humanStatus } from "../lib/status";
+import { showToast } from "../lib/toast";
 import { JourneyProgress } from "./JourneyProgress";
-import { Timeline } from "./Timeline";
 
 interface TrackingCardProps {
   result: TrackingResult;
@@ -32,15 +21,13 @@ export const TrackingCard: React.FC<TrackingCardProps> = ({
   onUpdateLabel,
   customLabel,
 }) => {
-  const [copiedTracking, setCopiedTracking] = useState(false);
-  const [copiedLink, setCopiedLink] = useState(false);
+  const [filterQuery, setFilterQuery] = useState("");
   const [isEditingLabel, setIsEditingLabel] = useState(false);
   const [labelInput, setLabelInput] = useState(customLabel || "");
 
-  const meta = STATUS_CONFIG[result.status] || STATUS_CONFIG.unknown;
   const etaText = formatEta(result.estimatedDelivery);
 
-  // Trigger celebration confetti when package is marked as Delivered!
+  // Confetti on delivered status
   useEffect(() => {
     if (result.status === "delivered") {
       try {
@@ -51,20 +38,14 @@ export const TrackingCard: React.FC<TrackingCardProps> = ({
           colors: ["#c08532", "#d4a04a", "#4ade80", "#edecec"],
         });
       } catch {
-        // Safe fallback
+        /* ignore */
       }
     }
   }, [result.status, result.trackingNumber]);
 
-  const copyToClipboard = (text: string, type: "tracking" | "link") => {
+  const copyToClipboard = (text: string, msg: string) => {
     navigator.clipboard.writeText(text).then(() => {
-      if (type === "tracking") {
-        setCopiedTracking(true);
-        setTimeout(() => setCopiedTracking(false), 2000);
-      } else {
-        setCopiedLink(true);
-        setTimeout(() => setCopiedLink(false), 2000);
-      }
+      showToast(msg, "success");
     });
   };
 
@@ -74,214 +55,272 @@ export const TrackingCard: React.FC<TrackingCardProps> = ({
       try {
         await navigator.share({
           title: `Shipment ${result.trackingNumber} (${result.carrierName || result.carrier})`,
-          text: `Status: ${meta.label}. Track package on PostTrack:`,
+          text: `Status: ${humanStatus(result.status)}. Track package on PostTrack:`,
           url,
         });
         return;
       } catch {
-        // fallback to clipboard
+        /* fallback */
       }
     }
-    copyToClipboard(url, "link");
+    copyToClipboard(url, "Share link copied to clipboard");
   };
 
   const handleSaveLabel = () => {
-    if (onUpdateLabel) {
-      onUpdateLabel(result.trackingNumber, labelInput);
-    }
+    if (onUpdateLabel) onUpdateLabel(result.trackingNumber, labelInput);
     setIsEditingLabel(false);
+    showToast("Package tag updated");
   };
 
-  const latestScan = result.events[result.events.length - 1];
+  // Events list: newest first
+  const orderedEvents = result.events.slice().reverse();
+  const filteredEvents = filterQuery.trim()
+    ? orderedEvents.filter(
+        (ev) =>
+          ev.description.toLowerCase().includes(filterQuery.toLowerCase()) ||
+          (ev.location && ev.location.toLowerCase().includes(filterQuery.toLowerCase())) ||
+          ev.timestamp.toLowerCase().includes(filterQuery.toLowerCase())
+      )
+    : orderedEvents;
 
   return (
-    <div className="relative w-full max-w-3xl mx-auto my-6 bg-[#1a1710] border border-[var(--border)] rounded-2xl p-5 sm:p-7 shadow-2xl transition-all overflow-hidden group">
-      {/* Golden left accent glow bar */}
-      <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-[var(--accent)] to-[var(--accent-2)] opacity-80" />
+    <div style={{ width: "100%", marginTop: 20 }}>
+      {/* Status Bar */}
+      <div className="status-bar">
+        <div className="status-info" style={{ flexWrap: "wrap" }}>
+          <span>Carrier:</span>
+          <span className="status-count">{result.carrierName || result.carrier}</span>
+          <span>•</span>
+          <span>AWB:</span>
+          <span
+            className="result-id"
+            onClick={() => copyToClipboard(result.trackingNumber, "Tracking number copied")}
+            title="Click to copy"
+            style={{ cursor: "pointer" }}
+          >
+            {result.trackingNumber} 📋
+          </span>
+          <span>•</span>
+          <span>Status:</span>
+          <span className="result-id" style={{ textTransform: "uppercase" }}>
+            {humanStatus(result.status)}
+          </span>
 
-      {/* Top Bar: Carrier info & Status badge */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-5 border-b border-[var(--border)]">
-        <div>
-          <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-            <span className="text-xs font-mono font-semibold text-[var(--accent)] bg-[rgba(192,133,50,0.12)] border border-[rgba(192,133,50,0.25)] px-2.5 py-0.5 rounded-full uppercase tracking-wider">
-              {result.carrierName || result.carrier}
-            </span>
-
-            {/* Custom package label */}
-            {customLabel && !isEditingLabel && (
-              <span className="text-xs font-mono text-[var(--text-2)] bg-[var(--surface)] border border-[var(--border)] px-2 py-0.5 rounded-md flex items-center gap-1">
-                <FiTag className="w-3 h-3 text-[var(--accent)]" />
-                {customLabel}
-              </span>
-            )}
-          </div>
-
-          {/* Tracking Number and Copy */}
-          <div className="flex items-center gap-2.5">
-            <h2 className="text-xl sm:text-2xl font-bold font-mono tracking-tight text-[var(--text)]">
-              {result.trackingNumber}
-            </h2>
-            <button
-              onClick={() => copyToClipboard(result.trackingNumber, "tracking")}
-              className="p-1.5 rounded-lg bg-[var(--surface)] border border-[var(--border)] text-[var(--text-3)] hover:text-[var(--text)] hover:border-[var(--border-hover)] transition-all cursor-pointer"
-              title="Copy Tracking Number"
-            >
-              {copiedTracking ? (
-                <FiCheck className="w-3.5 h-3.5 text-emerald-400" />
-              ) : (
-                <FiCopy className="w-3.5 h-3.5" />
-              )}
-            </button>
-          </div>
+          {customLabel && !isEditingLabel && (
+            <>
+              <span>•</span>
+              <span className="result-prefix">{customLabel}</span>
+            </>
+          )}
         </div>
 
-        {/* Status Pill Badge */}
-        <div className="flex flex-col sm:items-end gap-1.5">
-          <div
-            className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-mono font-bold tracking-wide uppercase shadow-sm"
-            style={{
-              backgroundColor: meta.badgeBg,
-              color: meta.textColor,
-              border: `1px solid ${meta.badgeBorder}`,
-            }}
+        <div className="status-actions">
+          <button
+            type="button"
+            className="export-btn"
+            onClick={handleShare}
+            title="Copy or share direct link"
           >
-            <span
-              className="w-2 h-2 rounded-full animate-pulse"
-              style={{ backgroundColor: meta.dotColor }}
-            />
-            {meta.label}
-          </div>
+            <svg viewBox="0 0 24 24">
+              <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
+              <polyline points="16 6 12 2 8 6" />
+              <line x1="12" y1="2" x2="12" y2="15" />
+            </svg>
+            Share
+          </button>
 
-          <span className="text-[11px] font-mono text-[var(--text-3)]">
-            Updated {new Date(result.fetchedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-          </span>
+          {!customLabel && !isEditingLabel && (
+            <button
+              type="button"
+              className="export-btn"
+              onClick={() => setIsEditingLabel(true)}
+            >
+              Tag
+            </button>
+          )}
+
+          <button
+            type="button"
+            className="export-btn"
+            onClick={onRefresh}
+            disabled={isRefreshing}
+          >
+            <svg viewBox="0 0 24 24">
+              <polyline points="23 4 23 10 17 10" />
+              <polyline points="1 20 1 14 7 14" />
+              <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+            </svg>
+            {isRefreshing ? "Refreshing…" : "Refresh"}
+          </button>
         </div>
       </div>
 
-      {/* Label Edit Inline Row */}
-      {isEditingLabel ? (
-        <div className="my-3 flex items-center gap-2 p-2 bg-[var(--surface)] rounded-xl border border-[var(--border)]">
-          <FiTag className="w-4 h-4 text-[var(--accent)] ml-1" />
+      {/* Label Edit Inline */}
+      {isEditingLabel && (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            marginBottom: 20,
+            padding: "10px 16px",
+            background: "var(--surface)",
+            border: "1px solid var(--border)",
+            borderRadius: "var(--radius)",
+          }}
+        >
           <input
             type="text"
             value={labelInput}
             onChange={(e) => setLabelInput(e.target.value)}
-            placeholder="Add a label (e.g., Laptop, Birthday Gift)..."
-            className="flex-1 bg-transparent text-xs text-[var(--text)] focus:outline-none"
+            placeholder="Add a friendly nickname (e.g. Work Laptop, Sneakers)..."
+            style={{
+              flex: 1,
+              background: "transparent",
+              border: "none",
+              outline: "none",
+              color: "var(--text)",
+              fontSize: 13,
+              fontFamily: "var(--sans)",
+            }}
             autoFocus
           />
           <button
+            type="button"
+            className="action-btn primary"
             onClick={handleSaveLabel}
-            className="px-3 py-1 bg-[var(--accent)] text-black text-xs font-semibold rounded-lg"
+            style={{ padding: "6px 14px", fontSize: 12 }}
           >
             Save
           </button>
           <button
+            type="button"
+            className="action-btn"
             onClick={() => setIsEditingLabel(false)}
-            className="px-2 py-1 text-xs text-[var(--text-3)] hover:text-[var(--text)]"
+            style={{ padding: "6px 12px", fontSize: 12 }}
           >
             Cancel
           </button>
         </div>
-      ) : null}
+      )}
 
-      {/* Milestone Journey Progress */}
+      {/* 3 Metric Stat Cards */}
+      <div className="modal-stats" style={{ gridTemplateColumns: "repeat(3, 1fr)", marginBottom: 28 }}>
+        <div className="stat-card">
+          <div className="stat-num" style={{ fontSize: 15, wordBreak: "break-word" }}>
+            {result.origin && result.destination ? (
+              `${result.origin} → ${result.destination}`
+            ) : result.destination ? (
+              `To ${result.destination}`
+            ) : result.origin ? (
+              `From ${result.origin}`
+            ) : (
+              "Domestic Route"
+            )}
+          </div>
+          <div className="stat-label">Route Details</div>
+        </div>
+
+        <div className="stat-card">
+          <div className="stat-num" style={{ color: "var(--accent)" }}>
+            {etaText || "Scheduled"}
+          </div>
+          <div className="stat-label">Expected Delivery</div>
+        </div>
+
+        <div className="stat-card">
+          <div className="stat-num">{result.events.length}</div>
+          <div className="stat-label">Total Scan Events</div>
+        </div>
+      </div>
+
+      {/* Journey Milestones Bar */}
       <JourneyProgress status={result.status} />
 
-      {/* Quick Summary Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 my-5">
-        {/* Origin & Destination */}
-        <div className="p-3.5 rounded-xl bg-[var(--surface)] border border-[var(--border)] flex flex-col justify-between">
-          <span className="text-[10px] font-mono uppercase tracking-wider text-[var(--text-3)] mb-1 flex items-center gap-1">
-            <FiMapPin className="w-3 h-3 text-[var(--accent)]" /> Route
-          </span>
-          <div className="text-xs sm:text-sm font-medium text-[var(--text)] truncate">
-            {result.origin && result.destination ? (
-              <span>
-                {result.origin} → {result.destination}
-              </span>
-            ) : result.destination ? (
-              <span>To {result.destination}</span>
-            ) : result.origin ? (
-              <span>From {result.origin}</span>
-            ) : (
-              <span className="text-[var(--text-3)]">Domestic Network</span>
-            )}
-          </div>
-        </div>
-
-        {/* Expected Delivery */}
-        <div className="p-3.5 rounded-xl bg-[var(--surface)] border border-[var(--border)] flex flex-col justify-between">
-          <span className="text-[10px] font-mono uppercase tracking-wider text-[var(--text-3)] mb-1 flex items-center gap-1">
-            <FiCalendar className="w-3 h-3 text-[var(--accent)]" /> Expected Delivery
-          </span>
-          <div className="text-xs sm:text-sm font-medium text-[var(--text)]">
-            {etaText ? (
-              <span className="text-emerald-400 font-semibold">{etaText}</span>
-            ) : (
-              <span className="text-[var(--text-3)]">Standard Schedule</span>
-            )}
-          </div>
-        </div>
-
-        {/* Latest Activity */}
-        <div className="p-3.5 rounded-xl bg-[var(--surface)] border border-[var(--border)] flex flex-col justify-between">
-          <span className="text-[10px] font-mono uppercase tracking-wider text-[var(--text-3)] mb-1 flex items-center gap-1">
-            <FiTruck className="w-3 h-3 text-[var(--accent)]" /> Latest Activity
-          </span>
-          <div className="text-xs sm:text-sm font-medium text-[var(--text)] truncate" title={latestScan?.description}>
-            {latestScan?.description || "In transit with courier"}
-          </div>
-        </div>
-      </div>
-
-      {/* Action Toolbar */}
-      <div className="flex items-center justify-between gap-2 pt-3 flex-wrap">
-        <div className="flex items-center gap-2">
-          {/* Share Button */}
-          <button
-            onClick={handleShare}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--surface)] border border-[var(--border)] text-xs text-[var(--text-2)] hover:text-[var(--text)] hover:border-[var(--border-hover)] transition-all cursor-pointer"
-            title="Share Tracking Link"
-          >
-            {copiedLink ? (
-              <>
-                <FiCheck className="w-3.5 h-3.5 text-emerald-400" />
-                <span className="text-emerald-400">Link Copied!</span>
-              </>
-            ) : (
-              <>
-                <FiShare2 className="w-3.5 h-3.5 text-[var(--accent)]" />
-                <span>Share Link</span>
-              </>
-            )}
-          </button>
-
-          {/* Add Label Button */}
-          {!customLabel && !isEditingLabel && (
-            <button
-              onClick={() => setIsEditingLabel(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--surface)] border border-[var(--border)] text-xs text-[var(--text-2)] hover:text-[var(--text)] hover:border-[var(--border-hover)] transition-all cursor-pointer"
-            >
-              <FiTag className="w-3.5 h-3.5 text-[var(--accent)]" />
-              <span>Add Tag</span>
-            </button>
-          )}
-        </div>
-
-        {/* Refresh Button */}
-        <button
-          onClick={onRefresh}
-          disabled={isRefreshing}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--surface)] border border-[var(--border)] text-xs text-[var(--text-2)] hover:text-[var(--text)] hover:border-[var(--border-hover)] transition-all cursor-pointer disabled:opacity-40"
+      {/* Result Filter Divider */}
+      <div className="result-filter-divider">
+        <svg
+          className="search-icon"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
         >
-          <FiRefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? "animate-spin text-[var(--accent)]" : ""}`} />
-          <span>{isRefreshing ? "Refreshing..." : "Refresh"}</span>
-        </button>
+          <circle cx="11" cy="11" r="8" />
+          <path d="m21 21-4.35-4.35" />
+        </svg>
+
+        <input
+          className="divider-input"
+          type="text"
+          value={filterQuery}
+          onChange={(e) => setFilterQuery(e.target.value)}
+          placeholder="Filter scan records by keyword, city, or status..."
+        />
+
+        <div className="filter-divider-meta matches">
+          {filteredEvents.length} {filteredEvents.length === 1 ? "SCAN" : "SCANS"}
+        </div>
+
+        {filterQuery && (
+          <button
+            type="button"
+            className="filter-divider-clear"
+            onClick={() => setFilterQuery("")}
+            title="Clear filter"
+          >
+            ✕
+          </button>
+        )}
       </div>
 
-      {/* Connected Detailed Timeline */}
-      <Timeline events={result.events} />
+      {/* Results List Cards */}
+      {filteredEvents.length === 0 ? (
+        <div
+          style={{
+            padding: 40,
+            textAlign: "center",
+            color: "var(--text-3)",
+            fontSize: 14,
+            background: "var(--surface)",
+            border: "1px solid var(--border)",
+            borderRadius: "var(--radius)",
+          }}
+        >
+          No scan records match &ldquo;{filterQuery}&rdquo;
+        </div>
+      ) : (
+        <div className="results-list">
+          {filteredEvents.map((ev, idx) => {
+            const when = displayCarrierDate(ev.timestamp);
+            const isFirst = idx === 0 && !filterQuery;
+
+            return (
+              <div
+                key={idx}
+                className={`result-card ${isFirst ? "card-fetching" : ""}`}
+                style={{ cursor: "default" }}
+              >
+                <div className="result-index">#{String(idx + 1).padStart(2, "0")}</div>
+
+                <div className="result-body">
+                  <div className="result-title" style={{ whiteSpace: "normal" }}>
+                    {ev.description}
+                  </div>
+
+                  <div className="result-meta">
+                    <span className="result-id">{humanStatus(ev.status)}</span>
+                    {when.text && <span className="result-date">{when.text}</span>}
+                    {ev.location && <span className="result-prefix">{ev.location}</span>}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 };
