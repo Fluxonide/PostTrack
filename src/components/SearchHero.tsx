@@ -66,12 +66,6 @@ export const SearchHero: React.FC<SearchHeroProps> = ({
     onSearch(carrier, cleaned);
   };
 
-  const handleSampleClick = (cId: string, sampleNum: string) => {
-    setTrackingNumber(sampleNum);
-    setCarrier(cId);
-    if (inputRef.current) inputRef.current.focus();
-    onSearch(cId, sampleNum);
-  };
 
   return (
     <section className="hero">
@@ -212,45 +206,6 @@ export const SearchHero: React.FC<SearchHeroProps> = ({
           </div>
         )}
 
-        {/* Hints */}
-        <div className="search-hints">
-          <span className="hint-label">Try sample:</span>
-          <button
-            type="button"
-            className="hint-chip"
-            onClick={() => handleSampleClick("ekart", "FMPP4307095480")}
-          >
-            Ekart: FMPP4307095480
-          </button>
-          <button
-            type="button"
-            className="hint-chip"
-            onClick={() => handleSampleClick("bluedart", "42183920194")}
-          >
-            Blue Dart: 42183920194
-          </button>
-          <button
-            type="button"
-            className="hint-chip"
-            onClick={() => handleSampleClick("delhivery", "1234567890123")}
-          >
-            Delhivery: 1234567890123
-          </button>
-          <button
-            type="button"
-            className="hint-chip"
-            onClick={() => handleSampleClick("tpc", "PON8334106")}
-          >
-            TPC: PON8334106
-          </button>
-          <button
-            type="button"
-            className="hint-chip"
-            onClick={() => handleSampleClick("stcourier", "10987654321")}
-          >
-            ST Courier: 10987654321
-          </button>
-        </div>
       </div>
     </section>
   );
