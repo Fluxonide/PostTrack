@@ -6,6 +6,7 @@ import { delhivery } from "./delhivery";
 import { ekart } from "./ekart";
 import { stcourier } from "./stcourier";
 import { tpc } from "./tpc";
+import { xpressbees } from "./xpressbees";
 
 export const carriers: Record<string, Carrier> = {
   [bluedart.id]: bluedart,
@@ -15,6 +16,7 @@ export const carriers: Record<string, Carrier> = {
   [stcourier.id]: stcourier,
   [tpc.id]: tpc,
   [shiprocket.id]: shiprocket,
+  [xpressbees.id]: xpressbees,
 };
 
 export function getCarrier(id: string): Carrier | undefined {
