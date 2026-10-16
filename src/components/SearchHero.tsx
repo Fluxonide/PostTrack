@@ -16,6 +16,7 @@ const CARRIER_TABS: CarrierTab[] = [
   { id: "amazon", name: "Amazon" },
   { id: "shiprocket", name: "Shiprocket" },
   { id: "xpressbees", name: "XpressBees" },
+  { id: "valmo", name: "Valmo (Meesho)" },
 ];
 
 interface SearchHeroProps {
@@ -56,7 +57,7 @@ export const SearchHero: React.FC<SearchHeroProps> = ({
         <span>instantly.</span>
       </h1>
       <p className="hero-sub">
-        Direct live multi-carrier tracking for Blue Dart, Delhivery, Ekart, XpressBees, ST Courier, Professional Couriers, Amazon & Shiprocket — all from one place.
+        Direct live multi-carrier tracking for Blue Dart, Delhivery, Ekart, XpressBees, Valmo, ST Courier, Professional Couriers, Amazon & Shiprocket — all from one place.
       </p>
 
       <div className="search-wrap">

@@ -1,6 +1,7 @@
 import React from "react";
-import type { ShipmentStatus } from "../carriers/types";
+import type { ShipmentStatus, TrackingEvent } from "../carriers/types";
 import { STATUS_CONFIG, TRACKING_STEPS } from "../lib/status";
+import { parseCarrierDate } from "../lib/dates";
 
 // Distinct SVG icon per milestone — visually communicates each stage
 const STEP_ICONS: Record<string, React.ReactNode> = {
@@ -47,12 +48,51 @@ const STEP_ICONS: Record<string, React.ReactNode> = {
 
 interface JourneyProgressProps {
   status: ShipmentStatus;
+  events?: TrackingEvent[];
 }
 
-export const JourneyProgress: React.FC<JourneyProgressProps> = ({ status }) => {
+export const JourneyProgress: React.FC<JourneyProgressProps> = ({ status, events }) => {
   const meta = STATUS_CONFIG[status] || STATUS_CONFIG.unknown;
-  const currentStep = meta.stepIndex;
   const isException = status === "exception" || status === "returned";
+
+  // Calculate the latest step reached by checking both overall status and recent events
+  const currentStep = React.useMemo(() => {
+    let bestIndex = meta.stepIndex >= 0 ? meta.stepIndex : 0;
+
+    if (events && events.length > 0) {
+      // Find latest event by timestamp
+      const sorted = [...events].map((ev, originalIndex) => ({
+        ev,
+        time: parseCarrierDate(ev.timestamp)?.getTime() ?? null,
+        originalIndex,
+      }));
+
+      sorted.sort((a, b) => {
+        if (a.time !== null && b.time !== null) return b.time - a.time;
+        if (a.time !== null) return -1;
+        if (b.time !== null) return 1;
+        return b.originalIndex - a.originalIndex;
+      });
+
+      const latestEvent = sorted[0]?.ev;
+      if (latestEvent && latestEvent.status !== "unknown") {
+        const latestIdx = STATUS_CONFIG[latestEvent.status]?.stepIndex ?? -1;
+        if (latestIdx >= 0) bestIndex = latestIdx;
+      }
+
+      // Check if any event records reached a higher milestone (e.g. out for delivery or delivered)
+      for (const item of sorted) {
+        const step = STATUS_CONFIG[item.ev.status]?.stepIndex ?? -1;
+        if (step > bestIndex) {
+          bestIndex = step;
+        }
+      }
+    }
+
+    return bestIndex;
+  }, [status, meta.stepIndex, events]);
+
+  const activeLabel = TRACKING_STEPS[currentStep]?.label || meta.label;
 
   if (isException) {
     return (
@@ -87,7 +127,7 @@ export const JourneyProgress: React.FC<JourneyProgressProps> = ({ status }) => {
           Shipment Progress
         </span>
         <span style={{ color: "var(--accent)", fontWeight: 600 }}>
-          {meta.label}
+          {activeLabel}
         </span>
       </div>
 

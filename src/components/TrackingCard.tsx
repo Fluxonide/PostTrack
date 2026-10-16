@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import confetti from "canvas-confetti";
 import type { TrackingResult } from "../carriers/types";
-import { formatCarrierDate, formatEta, displayCarrierDate } from "../lib/dates";
+import { formatCarrierDate, formatEta, displayCarrierDate, parseCarrierDate } from "../lib/dates";
 import { humanStatus } from "../lib/status";
 import { showToast } from "../lib/toast";
 import { JourneyProgress } from "./JourneyProgress";
@@ -72,8 +72,30 @@ export const TrackingCard: React.FC<TrackingCardProps> = ({
     showToast("Package tag updated");
   };
 
-  // Events list: newest first
-  const orderedEvents = result.events.slice().reverse();
+  // Events list: ensure newest update is always first
+  const orderedEvents = React.useMemo(() => {
+    const list = [...result.events];
+    const withDates = list.map((ev, originalIndex) => ({
+      ev,
+      time: parseCarrierDate(ev.timestamp)?.getTime() ?? null,
+      originalIndex,
+    }));
+
+    const hasValidDates = withDates.some((item) => item.time !== null);
+
+    if (hasValidDates) {
+      withDates.sort((a, b) => {
+        if (a.time !== null && b.time !== null) return b.time - a.time;
+        if (a.time !== null) return -1;
+        if (b.time !== null) return 1;
+        return b.originalIndex - a.originalIndex;
+      });
+      return withDates.map((item) => item.ev);
+    }
+
+    return list.reverse();
+  }, [result.events]);
+
   const filteredEvents = filterQuery.trim()
     ? orderedEvents.filter(
         (ev) =>
@@ -254,7 +276,7 @@ export const TrackingCard: React.FC<TrackingCardProps> = ({
       </div>
 
       {/* Journey Milestones Bar */}
-      <JourneyProgress status={result.status} />
+      <JourneyProgress status={result.status} events={result.events} />
 
       {/* Result Filter Divider */}
       <div className="result-filter-divider">
@@ -322,7 +344,27 @@ export const TrackingCard: React.FC<TrackingCardProps> = ({
                 className={`result-card ${isFirst ? "card-fetching" : ""}`}
                 style={{ cursor: "default" }}
               >
-                <div className="result-index">#{String(idx + 1).padStart(2, "0")}</div>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    width: 20,
+                    flexShrink: 0,
+                  }}
+                >
+                  <div
+                    style={{
+                      width: isFirst ? 9 : 6,
+                      height: isFirst ? 9 : 6,
+                      borderRadius: "50%",
+                      background: isFirst ? "var(--accent)" : "var(--text-3)",
+                      boxShadow: isFirst ? "0 0 10px var(--accent-glow)" : "none",
+                      opacity: isFirst ? 1 : 0.45,
+                      transition: "all var(--transition)",
+                    }}
+                  />
+                </div>
 
                 <div className="result-body">
                   <div className="result-title" style={{ whiteSpace: "normal" }}>
@@ -331,6 +373,19 @@ export const TrackingCard: React.FC<TrackingCardProps> = ({
 
                   <div className="result-meta">
                     <span className="result-id">{humanStatus(ev.status)}</span>
+                    {isFirst && (
+                      <span
+                        className="result-prefix"
+                        style={{
+                          color: "var(--accent)",
+                          borderColor: "rgba(192, 133, 50, 0.35)",
+                          background: "rgba(192, 133, 50, 0.08)",
+                          fontWeight: 700,
+                        }}
+                      >
+                        Latest
+                      </span>
+                    )}
                     {when.text && <span className="result-date">{when.text}</span>}
                     {ev.location && <span className="result-prefix">{ev.location}</span>}
                   </div>
