@@ -84,22 +84,56 @@ export const SearchHero: React.FC<SearchHeroProps> = ({
         Direct live multi-carrier tracking for Blue Dart, Delhivery, Ekart, ST Courier, Professional Couriers, Amazon & Shiprocket — all from one place.
       </p>
 
-      {/* Tabs for carrier selection */}
-      <div className="tabs" style={{ flexWrap: "wrap", justifyContent: "center" }}>
-        {CARRIER_TABS.map((tab) => (
-          <button
-            key={tab.id}
-            type="button"
-            className={`tab-btn ${carrier === tab.id ? "active" : ""}`}
-            onClick={() => setCarrier(tab.id)}
-          >
-            {tab.name}
-          </button>
-        ))}
-      </div>
-
       <div className="search-wrap">
-        <form onSubmit={handleSubmit} className="search-box">
+        <form onSubmit={handleSubmit} className="search-box" style={{ paddingLeft: 12 }}>
+          {/* Integrated Carrier Dropdown inside the search bar line */}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 4,
+              paddingRight: 10,
+              marginRight: 6,
+              borderRight: "1px solid var(--border)",
+              flexShrink: 0,
+            }}
+          >
+            <select
+              value={carrier}
+              onChange={(e) => setCarrier(e.target.value)}
+              aria-label="Select carrier"
+              style={{
+                appearance: "none",
+                WebkitAppearance: "none",
+                background: "transparent",
+                color: carrier === AUTO_CARRIER ? "var(--text-2)" : "var(--accent)",
+                border: "none",
+                outline: "none",
+                fontSize: 13,
+                fontFamily: "var(--mono)",
+                fontWeight: 600,
+                cursor: "pointer",
+                padding: "6px 20px 6px 4px",
+                backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%23c08532' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E")`,
+                backgroundRepeat: "no-repeat",
+                backgroundPosition: "right 2px center",
+              }}
+            >
+              {CARRIER_TABS.map((tab) => (
+                <option
+                  key={tab.id}
+                  value={tab.id}
+                  style={{
+                    background: "#14120b",
+                    color: "#edecec",
+                  }}
+                >
+                  {tab.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
           <svg
             className="search-icon"
             width="18"
