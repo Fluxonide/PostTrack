@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { FiAlertTriangle, FiRefreshCw, FiExternalLink } from "react-icons/fi";
 import type { TrackingResult } from "./carriers/types";
 import { AUTO_CARRIER } from "./carriers/detect";
 import { Navbar } from "./components/Navbar";
@@ -7,6 +6,7 @@ import { SearchHero } from "./components/SearchHero";
 import { TrackingCard } from "./components/TrackingCard";
 import { RecentHistory } from "./components/RecentHistory";
 import { CarriersModal } from "./components/CarriersModal";
+import { showToast } from "./lib/toast";
 import {
   getRecentShipments,
   saveShipment,
@@ -20,7 +20,7 @@ export default function App() {
   const [result, setResult] = useState<TrackingResult | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [error, setError] = useState<{ message: string; code?: string } | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const [recentItems, setRecentItems] = useState<StoredTrackingItem[]>(() => getRecentShipments());
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
@@ -45,14 +45,14 @@ export default function App() {
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(data.message || data.error || "Failed to locate shipment.");
+        throw new Error(data.message || data.error || "Shipment could not be located with this carrier.");
       }
 
       setResult(data as TrackingResult);
       setActiveTrackingNumber(cleaned);
       setActiveCarrier(carrierId);
 
-      // Save to recent history
+      // Save to recent
       const latestScan = data.events && data.events.length > 0 ? data.events[data.events.length - 1] : undefined;
       const historyItem: StoredTrackingItem = {
         trackingNumber: cleaned,
@@ -67,15 +67,19 @@ export default function App() {
       saveShipment(historyItem);
       setRecentItems(getRecentShipments());
 
-      // Update URL query without full reload
+      // Update URL query parameter
       const url = new URL(window.location.href);
       url.searchParams.set("carrier", carrierId);
       url.searchParams.set("track", cleaned);
       window.history.replaceState({}, "", url.toString());
+
+      if (isSilentRefresh) {
+        showToast("Tracking data refreshed");
+      }
     } catch (err) {
-      setError({
-        message: err instanceof Error ? err.message : "Error fetching shipment updates.",
-      });
+      const msg = err instanceof Error ? err.message : "Error fetching shipment.";
+      setError(msg);
+      showToast(msg, "error");
       if (!isSilentRefresh) {
         setResult(null);
       }
@@ -85,7 +89,6 @@ export default function App() {
     }
   }, []);
 
-  // Check URL parameters on mount
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const trackParam = params.get("track") || params.get("tracking");
@@ -104,11 +107,13 @@ export default function App() {
   const handleRemoveHistoryItem = (trackingNumber: string) => {
     removeShipment(trackingNumber);
     setRecentItems(getRecentShipments());
+    showToast("Removed from history");
   };
 
   const handleClearAllHistory = () => {
     clearAllShipments();
     setRecentItems([]);
+    showToast("All recent tracking history cleared");
   };
 
   const activeSavedItem = recentItems.find(
@@ -116,58 +121,50 @@ export default function App() {
   );
 
   return (
-    <div className="relative min-h-screen bg-[var(--bg)] text-[var(--text)] flex flex-col font-sans selection:bg-[var(--accent)] selection:text-white">
-      {/* Ambient background glows */}
-      <div className="glow-orb-top" />
-      <div className="glow-orb-bottom" />
-
-      {/* Glassmorphic Navbar */}
+    <>
       <Navbar
         onOpenCarriers={() => setIsCarriersOpen(true)}
         onOpenHistory={() => setIsHistoryOpen(true)}
         historyCount={recentItems.length}
       />
 
-      {/* Main Content Area */}
-      <main className="relative z-10 flex-1 flex flex-col items-center px-4 pb-16">
-        <SearchHero
-          onSearch={(carrier, tracking) => performLookup(carrier, tracking)}
-          isLoading={isLoading}
-          initialTracking={activeTrackingNumber}
-          initialCarrier={activeCarrier}
-        />
+      <SearchHero
+        onSearch={(carrier, tracking) => performLookup(carrier, tracking)}
+        isLoading={isLoading}
+        initialTracking={activeTrackingNumber}
+        initialCarrier={activeCarrier}
+      />
 
-        {/* Error notification card */}
+      <main>
+        {/* Error notification */}
         {error && !isLoading && (
-          <div className="w-full max-w-3xl my-6 p-4 rounded-xl bg-rose-500/10 border border-rose-500/25 flex items-start gap-3.5 text-rose-200 animate-fade-slide-up">
-            <FiAlertTriangle className="w-5 h-5 text-rose-400 flex-shrink-0 mt-0.5" />
-            <div className="flex-1 text-xs sm:text-sm">
-              <span className="font-bold text-rose-300">Tracking Notice:</span> {error.message}
-              <p className="mt-1 text-xs text-rose-300/70">
-                Ensure the consignment number is correct, or manually select your carrier from the dropdown if auto-detect could not resolve it.
-              </p>
-            </div>
+          <div className="error-msg" style={{ margin: "20px 0" }}>
+            <strong>Tracking Notice:</strong> {error}
           </div>
         )}
 
-        {/* Loading skeleton */}
+        {/* Loading card */}
         {isLoading && (
-          <div className="w-full max-w-3xl my-6 p-6 rounded-2xl bg-[var(--surface)] border border-[var(--border)] animate-pulse flex flex-col gap-4">
-            <div className="flex items-center justify-between">
-              <div className="h-6 w-32 bg-[var(--border)] rounded-md" />
-              <div className="h-6 w-24 bg-[var(--border)] rounded-full" />
-            </div>
-            <div className="h-8 w-64 bg-[var(--border)] rounded-md" />
-            <div className="h-2 w-full bg-[var(--border)] rounded-full my-4" />
-            <div className="grid grid-cols-3 gap-3">
-              <div className="h-16 bg-[var(--border)] rounded-xl" />
-              <div className="h-16 bg-[var(--border)] rounded-xl" />
-              <div className="h-16 bg-[var(--border)] rounded-xl" />
+          <div
+            className="result-card card-fetching"
+            style={{
+              padding: "40px 24px",
+              textAlign: "center",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: 16,
+              margin: "24px 0",
+            }}
+          >
+            <div className="spinner" style={{ width: 24, height: 24, borderWidth: 3 }} />
+            <div style={{ fontSize: 14, color: "var(--accent)", fontFamily: "var(--mono)" }}>
+              Querying live carrier tracking systems…
             </div>
           </div>
         )}
 
-        {/* Loaded Tracking Result */}
+        {/* Tracking Result Card */}
         {result && !isLoading && (
           <TrackingCard
             result={result}
@@ -179,7 +176,7 @@ export default function App() {
         )}
       </main>
 
-      {/* History Slide-over Drawer */}
+      {/* Slide-over Modals */}
       <RecentHistory
         isOpen={isHistoryOpen}
         onClose={() => setIsHistoryOpen(false)}
@@ -189,7 +186,6 @@ export default function App() {
         onClearAll={handleClearAllHistory}
       />
 
-      {/* Carriers Directory Modal */}
       <CarriersModal
         isOpen={isCarriersOpen}
         onClose={() => setIsCarriersOpen(false)}
@@ -197,32 +193,47 @@ export default function App() {
       />
 
       {/* Footer */}
-      <footer className="relative z-10 border-t border-[var(--border)] py-6 text-center text-xs font-mono text-[var(--text-3)] bg-[#14120b]/90">
-        <div className="max-w-4xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <img src="/logo.svg" alt="PostTrack" className="w-4 h-4 opacity-70" />
-            <span>PostTrack — Open Multi-Carrier Logistics</span>
-          </div>
-
-          <div className="flex items-center gap-4">
-            <button
+      <footer
+        style={{
+          borderTop: "1px solid var(--border)",
+          padding: "24px 40px",
+          textAlign: "center",
+          fontSize: 12,
+          fontFamily: "var(--mono)",
+          color: "var(--text-3)",
+          marginTop: "auto",
+        }}
+      >
+        <div
+          style={{
+            maxWidth: 860,
+            margin: "0 auto",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            flexWrap: "wrap",
+            gap: 12,
+          }}
+        >
+          <div>PostTrack — Open-Source Multi-Carrier Logistics Engine</div>
+          <div style={{ display: "flex", gap: 16 }}>
+            <span
               onClick={() => setIsCarriersOpen(true)}
-              className="hover:text-[var(--text)] transition-colors cursor-pointer"
+              style={{ cursor: "pointer", color: "var(--text-2)" }}
             >
               Supported Carriers
-            </button>
-            <span>•</span>
+            </span>
             <a
               href="https://github.com/Fluxonide/PostTrack"
               target="_blank"
               rel="noreferrer"
-              className="hover:text-[var(--text)] transition-colors"
+              style={{ color: "var(--text-2)", textDecoration: "none" }}
             >
-              GitHub Source
+              GitHub Source ↗
             </a>
           </div>
         </div>
       </footer>
-    </div>
+    </>
   );
 }
