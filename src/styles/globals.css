@@ -1,0 +1,149 @@
+@import "tailwindcss";
+
+/* ===== TAILWIND V4 THEME — PostTrack Design Tokens (inspired by v2) ===== */
+@theme {
+  /* Background colors */
+  --color-bg: #14120b;
+  --color-bg-2: #1a1710;
+  --color-bg-3: #211e15;
+
+  /* Accent colors */
+  --color-accent: #c08532;
+  --color-accent-2: #d4a04a;
+  --color-accent-glow: rgba(192, 133, 50, 0.25);
+
+  /* Semantic status colors */
+  --color-success: #4ade80;
+  --color-error: #f87171;
+  --color-warning: #fbbf24;
+  --color-info: #60a5fa;
+
+  /* Surface & border */
+  --color-surface: rgba(237, 236, 228, 0.04);
+  --color-surface-hover: rgba(237, 236, 228, 0.07);
+  --color-border: rgba(237, 236, 228, 0.08);
+  --color-border-hover: rgba(237, 236, 228, 0.18);
+
+  /* Text colors */
+  --color-text: #edecec;
+  --color-text-2: rgba(237, 236, 236, 0.6);
+  --color-text-3: rgba(237, 236, 236, 0.35);
+
+  /* Fonts */
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+
+  /* Border radius */
+  --radius-DEFAULT: 14px;
+  --radius-sm: 8px;
+  --radius-pill: 999px;
+
+  /* Transitions */
+  --transition-theme: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+:root {
+  --bg: #14120b;
+  --bg-2: #1a1710;
+  --bg-3: #211e15;
+  --surface: rgba(237, 236, 228, 0.04);
+  --surface-hover: rgba(237, 236, 228, 0.07);
+  --border: rgba(237, 236, 228, 0.08);
+  --border-hover: rgba(237, 236, 228, 0.18);
+  --accent: #c08532;
+  --accent-2: #d4a04a;
+  --accent-glow: rgba(192, 133, 50, 0.25);
+  --text: #edecec;
+  --text-2: rgba(237, 236, 236, 0.6);
+  --text-3: rgba(237, 236, 236, 0.35);
+  --mono: "JetBrains Mono", monospace;
+  --sans: "Inter", sans-serif;
+  --radius: 14px;
+  --radius-sm: 8px;
+  --radius-pill: 999px;
+  --transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+  color-scheme: dark;
+}
+
+body {
+  font-family: var(--sans);
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: rgba(192, 133, 50, 0.9);
+  color: #fff;
+}
+
+/* Subtle background noise overlay */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAwBAMAAAClLOS0AAAAElBMVEUAAAAAAAAAAAAAAAAAAAAAAADgKxmiAAAABnRSTlMFBQUFBQWoay6DAAAASUlEQVQ4y2MQRgMMDCiBKIMoCkGhKIoqRBOE0MQxAFWRMIZCYQyFIugKhTEUCqMrFMZSKIylUBhLIYY5YugKMcwRw1CIMYcWAABFQi7MibxRjgAAAABJRU5ErkJggg==");
+  background-repeat: repeat;
+  background-size: 48px 48px;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.035;
+}
+
+/* Ambient glow orbs */
+.glow-orb-top {
+  position: fixed;
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(circle, rgba(192, 133, 50, 0.08) 0%, rgba(212, 160, 74, 0.02) 40%, transparent 70%);
+  top: -200px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.glow-orb-bottom {
+  position: fixed;
+  width: 700px;
+  height: 700px;
+  background: radial-gradient(circle, rgba(212, 160, 74, 0.05) 0%, rgba(192, 133, 50, 0.015) 35%, transparent 65%);
+  bottom: -200px;
+  right: -150px;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--border-hover);
+}
