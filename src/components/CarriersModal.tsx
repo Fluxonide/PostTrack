@@ -29,7 +29,7 @@ export const CarriersModal: React.FC<CarriersModalProps> = ({
               Supported Courier Directory
             </div>
             <div style={{ fontSize: 12, color: "var(--text-3)", marginTop: 4 }}>
-              Direct integrations and real-time scrapers for 7 couriers
+              Direct integrations and real-time scrapers for 8 couriers
             </div>
           </div>
           <button className="modal-close" onClick={onClose} title="Close">

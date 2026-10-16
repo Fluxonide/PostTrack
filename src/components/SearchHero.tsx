@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { AUTO_CARRIER, detectCarriers } from "../carriers/detect";
+import { AUTO_CARRIER } from "../carriers/detect";
 
 interface CarrierTab {
   id: string;
@@ -15,17 +15,8 @@ const CARRIER_TABS: CarrierTab[] = [
   { id: "tpc", name: "TPC" },
   { id: "amazon", name: "Amazon" },
   { id: "shiprocket", name: "Shiprocket" },
+  { id: "xpressbees", name: "XpressBees" },
 ];
-
-const CARRIER_NAME_MAP: Record<string, string> = {
-  bluedart: "Blue Dart",
-  delhivery: "Delhivery",
-  ekart: "Ekart Logistics (Flipkart)",
-  amazon: "Amazon Shipping",
-  stcourier: "ST Courier",
-  tpc: "Professional Couriers",
-  shiprocket: "Shiprocket",
-};
 
 interface SearchHeroProps {
   onSearch: (carrier: string, trackingNumber: string) => void;
@@ -42,22 +33,12 @@ export const SearchHero: React.FC<SearchHeroProps> = ({
 }) => {
   const [carrier, setCarrier] = useState(initialCarrier);
   const [trackingNumber, setTrackingNumber] = useState(initialTracking);
-  const [detectedCandidates, setDetectedCandidates] = useState<string[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (initialTracking) setTrackingNumber(initialTracking);
     if (initialCarrier) setCarrier(initialCarrier);
   }, [initialTracking, initialCarrier]);
-
-  useEffect(() => {
-    const trimmed = trackingNumber.trim();
-    if (!trimmed) {
-      setDetectedCandidates([]);
-      return;
-    }
-    setDetectedCandidates(detectCarriers(trimmed));
-  }, [trackingNumber]);
 
   const handleSubmit = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -75,7 +56,7 @@ export const SearchHero: React.FC<SearchHeroProps> = ({
         <span>instantly.</span>
       </h1>
       <p className="hero-sub">
-        Direct live multi-carrier tracking for Blue Dart, Delhivery, Ekart, ST Courier, Professional Couriers, Amazon & Shiprocket — all from one place.
+        Direct live multi-carrier tracking for Blue Dart, Delhivery, Ekart, XpressBees, ST Courier, Professional Couriers, Amazon & Shiprocket — all from one place.
       </p>
 
       <div className="search-wrap">
@@ -184,27 +165,6 @@ export const SearchHero: React.FC<SearchHeroProps> = ({
           </button>
         </form>
 
-        {/* Pattern detection label if auto-detect */}
-        {carrier === AUTO_CARRIER && detectedCandidates.length > 0 && trackingNumber.trim() && (
-          <div
-            style={{
-              marginTop: 12,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 8,
-              fontSize: 12,
-              fontFamily: "var(--mono)",
-            }}
-          >
-            <span className="result-prefix">Pattern match</span>
-            {detectedCandidates.map((cId) => (
-              <span key={cId} className="result-id">
-                {CARRIER_NAME_MAP[cId] || cId}
-              </span>
-            ))}
-          </div>
-        )}
 
       </div>
     </section>

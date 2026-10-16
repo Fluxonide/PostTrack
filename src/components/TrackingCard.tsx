@@ -92,14 +92,38 @@ export const TrackingCard: React.FC<TrackingCardProps> = ({
           <span className="status-count">{result.carrierName || result.carrier}</span>
           <span>•</span>
           <span>AWB:</span>
-          <span
-            className="result-id"
+          <button
+            type="button"
             onClick={() => copyToClipboard(result.trackingNumber, "Tracking number copied")}
-            title="Click to copy"
-            style={{ cursor: "pointer" }}
+            title="Click to copy tracking number"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              background: "transparent",
+              border: "none",
+              padding: 0,
+              font: "inherit",
+              color: "inherit",
+              cursor: "pointer",
+            }}
           >
-            {result.trackingNumber} 📋
-          </span>
+            <span className="result-id">{result.trackingNumber}</span>
+            <svg
+              width="12"
+              height="12"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              style={{ color: "var(--text-3)", verticalAlign: "middle" }}
+            >
+              <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
+              <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
+            </svg>
+          </button>
           <span>•</span>
           <span>Status:</span>
           <span className="result-id" style={{ textTransform: "uppercase" }}>
