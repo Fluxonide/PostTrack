@@ -1,6 +1,7 @@
 import React from "react";
 import { ShipmentItem } from "./types";
 import { JourneyProgress } from "../JourneyProgress";
+import { ShipmentMap } from "../ShipmentMap";
 
 interface ShipmentTimelineModalProps {
   shipment: ShipmentItem | null;
@@ -41,10 +42,18 @@ export const ShipmentTimelineModal: React.FC<ShipmentTimelineModalProps> = ({
           </button>
         </div>
 
-        <div style={{ overflowY: "auto", flex: 1 }}>
+        <div style={{ overflowY: "auto", flex: 1, display: "flex", flexDirection: "column", gap: 20 }}>
           <JourneyProgress events={shipment.cachedResult.events || []} />
 
-          <div style={{ marginTop: 24 }}>
+          <ShipmentMap
+            origin={shipment.origin || undefined}
+            destination={shipment.destination || undefined}
+            events={shipment.cachedResult.events || []}
+            status={shipment.status}
+            height={280}
+          />
+
+          <div>
             <h4 style={{ fontSize: 14, color: "var(--text)", marginBottom: 12 }}>Activity History</h4>
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               {shipment.cachedResult.events?.map((ev, idx) => (
