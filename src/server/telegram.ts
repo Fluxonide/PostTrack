@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 import { db } from "./db";
 import { autoCheckWorker, ShipmentUpdateEvent } from "./autoCheck";
+import type { Shipment } from "./shipments";
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || "";
 const API_BASE = `https://api.telegram.org/bot${BOT_TOKEN}`;
@@ -135,6 +136,40 @@ class TelegramService {
       const eventLoc = evt.latestEvent.location ? `\n📍 ${escapeMarkdown(evt.latestEvent.location)}` : "";
       message += `\n💬 *Latest Milestone*:\n${escapeMarkdown(eventText)}${eventLoc}${eventTime}`;
     }
+
+    await this.sendMessage(user.telegram_chat_id, message, { parseMode: "Markdown" });
+  }
+
+  public async notifyShipmentAdded(shipment: Shipment): Promise<void> {
+    const stmt = db.prepare("SELECT telegram_chat_id, username FROM users WHERE id = ?");
+    const user = stmt.get(shipment.userId) as { telegram_chat_id: string | null; username: string } | undefined;
+
+    if (!user || !user.telegram_chat_id) {
+      return;
+    }
+
+    const carrierName = shipment.carrier.toUpperCase();
+    const displayName = shipment.label ? `*${escapeMarkdown(shipment.label)}* (${carrierName})` : `*${carrierName}*`;
+    const readableStatus = formatStatus(shipment.status);
+    const statusEmoji = getStatusEmoji(shipment.status);
+
+    let message = `📦 *New Shipment Added to Tracking!*\n\n`;
+    message += `🏷️ Package: ${displayName}\n`;
+    message += `🚚 Carrier: *${carrierName}*\n`;
+    message += `🔖 Tracking: \`${escapeMarkdown(shipment.trackingNumber)}\`\n`;
+    message += `📊 Status: ${statusEmoji} *${readableStatus}*\n`;
+
+    if (shipment.origin || shipment.destination) {
+      const route = [shipment.origin, shipment.destination].filter(Boolean).map(escapeMarkdown).join(" ➔ ");
+      message += `🗺️ Route: ${route}\n`;
+    }
+
+    if (shipment.lastEventText) {
+      const timeStr = shipment.lastEventTime ? ` _(${escapeMarkdown(shipment.lastEventTime)})_` : "";
+      message += `\n💬 *Latest Milestone*:\n${escapeMarkdown(shipment.lastEventText)}${timeStr}\n`;
+    }
+
+    message += `\n🔔 _You will automatically receive live notifications here whenever new scans or milestones occur!_`;
 
     await this.sendMessage(user.telegram_chat_id, message, { parseMode: "Markdown" });
   }

@@ -189,6 +189,9 @@ const server = http.createServer(async (req, res) => {
       }
       try {
         const shipment = await createShipment(user.id, carrier, trackingNumber, label);
+        telegramService.notifyShipmentAdded(shipment).catch((err) => {
+          console.error("[Telegram] Error notifying shipment added:", err);
+        });
         return sendJSON(res, 201, { shipment });
       } catch (err) {
         return sendJSON(res, 400, { error: "error", message: (err as Error).message });
