@@ -6,6 +6,10 @@ import { SearchHero } from "./components/SearchHero";
 import { TrackingCard } from "./components/TrackingCard";
 import { RecentHistory } from "./components/RecentHistory";
 import { CarriersModal } from "./components/CarriersModal";
+import { AuthModal } from "./components/AuthModal";
+import { TelegramModal } from "./components/TelegramModal";
+import { DashboardView } from "./components/DashboardView";
+import { AuthProvider, useAuth } from "./lib/authContext";
 import { showToast } from "./lib/toast";
 import {
   getRecentShipments,
@@ -16,7 +20,10 @@ import {
   StoredTrackingItem,
 } from "./lib/storage";
 
-export default function App() {
+function AppContent() {
+  const { user } = useAuth();
+  const [activeView, setActiveView] = useState<"tracker" | "dashboard">("tracker");
+
   const [result, setResult] = useState<TrackingResult | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -25,6 +32,8 @@ export default function App() {
   const [recentItems, setRecentItems] = useState<StoredTrackingItem[]>(() => getRecentShipments());
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isCarriersOpen, setIsCarriersOpen] = useState(false);
+  const [isAuthOpen, setIsAuthOpen] = useState(false);
+  const [isTelegramOpen, setIsTelegramOpen] = useState(false);
 
   const [activeTrackingNumber, setActiveTrackingNumber] = useState("");
   const [activeCarrier, setActiveCarrier] = useState(AUTO_CARRIER);
@@ -93,6 +102,11 @@ export default function App() {
     const params = new URLSearchParams(window.location.search);
     const trackParam = params.get("track") || params.get("tracking");
     const carrierParam = params.get("carrier") || AUTO_CARRIER;
+    const viewParam = params.get("view");
+
+    if (viewParam === "dashboard") {
+      setActiveView("dashboard");
+    }
 
     if (trackParam) {
       performLookup(carrierParam, trackParam);
@@ -123,65 +137,99 @@ export default function App() {
   return (
     <>
       <Navbar
+        activeView={activeView}
+        onSelectView={(v) => {
+          if (v === "dashboard" && !user) {
+            setIsAuthOpen(true);
+          } else {
+            setActiveView(v);
+          }
+        }}
         onOpenCarriers={() => setIsCarriersOpen(true)}
         onOpenHistory={() => setIsHistoryOpen(true)}
+        onOpenAuth={() => setIsAuthOpen(true)}
+        onOpenTelegram={() => {
+          if (!user) {
+            setIsAuthOpen(true);
+          } else {
+            setIsTelegramOpen(true);
+          }
+        }}
         historyCount={recentItems.length}
       />
 
-      <SearchHero
-        onSearch={(carrier, tracking) => performLookup(carrier, tracking)}
-        isLoading={isLoading}
-        initialTracking={activeTrackingNumber}
-        initialCarrier={activeCarrier}
-      />
-
-      <main>
-        {/* Error notification */}
-        {error && !isLoading && (
-          <div className="error-msg" style={{ margin: "20px 0" }}>
-            <strong>Tracking Notice:</strong> {error}
-          </div>
-        )}
-
-        {/* Loading card */}
-        {isLoading && (
-          <div
-            className="result-card card-fetching"
-            style={{
-              padding: "40px 24px",
-              textAlign: "center",
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              gap: 16,
-              margin: "24px 0",
+      {activeView === "dashboard" ? (
+        <main>
+          <DashboardView
+            onOpenTelegramModal={() => setIsTelegramOpen(true)}
+            onTrackManual={(carrier, track) => {
+              setActiveView("tracker");
+              performLookup(carrier, track);
             }}
-          >
-            <div className="spinner" style={{ width: 24, height: 24, borderWidth: 3 }} />
-            <div style={{ fontSize: 14, color: "var(--accent)", fontFamily: "var(--mono)" }}>
-              Querying live carrier tracking systems…
-            </div>
-          </div>
-        )}
-
-        {/* Tracking Result Card */}
-        {result && !isLoading && (
-          <TrackingCard
-            result={result}
-            onRefresh={() => performLookup(result.carrier, result.trackingNumber, true)}
-            isRefreshing={isRefreshing}
-            onUpdateLabel={handleUpdateLabel}
-            customLabel={activeSavedItem?.customLabel}
           />
-        )}
-      </main>
+        </main>
+      ) : (
+        <>
+          <SearchHero
+            onSearch={(carrier, tracking) => performLookup(carrier, tracking)}
+            isLoading={isLoading}
+            initialTracking={activeTrackingNumber}
+            initialCarrier={activeCarrier}
+          />
 
-      {/* Slide-over Modals */}
+          <main>
+            {/* Error notification */}
+            {error && !isLoading && (
+              <div className="error-msg" style={{ margin: "20px 0" }}>
+                <strong>Tracking Notice:</strong> {error}
+              </div>
+            )}
+
+            {/* Loading card */}
+            {isLoading && (
+              <div
+                className="result-card card-fetching"
+                style={{
+                  padding: "40px 24px",
+                  textAlign: "center",
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  gap: 16,
+                  margin: "24px 0",
+                }}
+              >
+                <div className="spinner" style={{ width: 24, height: 24, borderWidth: 3 }} />
+                <div style={{ fontSize: 14, color: "var(--accent)", fontFamily: "var(--mono)" }}>
+                  Querying live carrier tracking systems…
+                </div>
+              </div>
+            )}
+
+            {/* Tracking Result Card */}
+            {result && !isLoading && (
+              <TrackingCard
+                result={result}
+                onRefresh={() => performLookup(result.carrier, result.trackingNumber, true)}
+                isRefreshing={isRefreshing}
+                onUpdateLabel={handleUpdateLabel}
+                customLabel={activeSavedItem?.customLabel}
+                onOpenAuth={() => setIsAuthOpen(true)}
+              />
+            )}
+          </main>
+        </>
+      )}
+
+      {/* Slide-over Modals & Dialogs */}
       <RecentHistory
         isOpen={isHistoryOpen}
         onClose={() => setIsHistoryOpen(false)}
         items={recentItems}
-        onSelect={(carrier, tracking) => performLookup(carrier, tracking)}
+        onSelect={(carrier, tracking) => {
+          setActiveView("tracker");
+          performLookup(carrier, tracking);
+        }}
         onRemove={handleRemoveHistoryItem}
         onClearAll={handleClearAllHistory}
       />
@@ -189,7 +237,21 @@ export default function App() {
       <CarriersModal
         isOpen={isCarriersOpen}
         onClose={() => setIsCarriersOpen(false)}
-        onSelectSample={(carrier, tracking) => performLookup(carrier, tracking)}
+        onSelectSample={(carrier, tracking) => {
+          setActiveView("tracker");
+          performLookup(carrier, tracking);
+        }}
+      />
+
+      <AuthModal
+        isOpen={isAuthOpen}
+        onClose={() => setIsAuthOpen(false)}
+        onSuccess={() => setActiveView("dashboard")}
+      />
+
+      <TelegramModal
+        isOpen={isTelegramOpen}
+        onClose={() => setIsTelegramOpen(false)}
       />
 
       {/* Footer */}
@@ -206,7 +268,7 @@ export default function App() {
       >
         <div
           style={{
-            maxWidth: 860,
+            maxWidth: 1040,
             margin: "0 auto",
             display: "flex",
             alignItems: "center",
@@ -235,5 +297,13 @@ export default function App() {
         </div>
       </footer>
     </>
+  );
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   );
 }
