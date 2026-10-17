@@ -24,6 +24,7 @@ import {
 } from "./shipments";
 import { carrierRateLimiter } from "./rateLimiter";
 import { autoCheckWorker } from "./autoCheck";
+import { telegramService } from "./telegram";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = parseInt(process.env.PORT || process.env.WEB_API_PORT || "3001", 10);
@@ -229,6 +230,36 @@ const server = http.createServer(async (req, res) => {
         if (!synced) return sendJSON(res, 404, { error: "not_found", message: "Shipment not found" });
         return sendJSON(res, 200, { shipment: synced });
       }
+    }
+
+    // Telegram Integration endpoints (Protected)
+    if (pathname === "/api/telegram/status" && req.method === "GET") {
+      const user = getAuthUser(req);
+      if (!user) return sendJSON(res, 401, { error: "unauthorized", message: "Not authenticated" });
+      return sendJSON(res, 200, {
+        botConfigured: telegramService.isConfigured(),
+        botUsername: telegramService.getBotUsername(),
+        connected: user.telegramConnected,
+        telegramUsername: user.telegramUsername,
+      });
+    }
+
+    if (pathname === "/api/telegram/link-code" && req.method === "POST") {
+      const user = getAuthUser(req);
+      if (!user) return sendJSON(res, 401, { error: "unauthorized", message: "Not authenticated" });
+      const linkData = telegramService.generateLinkCode(user.id);
+      return sendJSON(res, 200, {
+        botConfigured: telegramService.isConfigured(),
+        botUsername: telegramService.getBotUsername(),
+        ...linkData,
+      });
+    }
+
+    if (pathname === "/api/telegram/disconnect" && req.method === "POST") {
+      const user = getAuthUser(req);
+      if (!user) return sendJSON(res, 401, { error: "unauthorized", message: "Not authenticated" });
+      const ok = telegramService.disconnect(user.id);
+      return sendJSON(res, 200, { ok });
     }
 
     // Health check
