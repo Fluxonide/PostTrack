@@ -131,7 +131,7 @@ class TelegramService {
     }
 
     if (evt.result.origin || evt.result.destination) {
-      const route = [evt.result.origin, evt.result.destination].filter(Boolean).map(escapeMarkdown).join(" ➔ ");
+      const route = [evt.result.origin, evt.result.destination].filter((s): s is string => Boolean(s)).map(escapeMarkdown).join(" ➔ ");
       message += `🗺️ Route: ${route}\n`;
     }
 
@@ -169,7 +169,7 @@ class TelegramService {
     message += `📊 Status: ${statusEmoji} *${readableStatus}*\n`;
 
     if (shipment.origin || shipment.destination) {
-      const route = [shipment.origin, shipment.destination].filter(Boolean).map(escapeMarkdown).join(" ➔ ");
+      const route = [shipment.origin, shipment.destination].filter((s): s is string => Boolean(s)).map(escapeMarkdown).join(" ➔ ");
       message += `🗺️ Route: ${route}\n`;
     }
 

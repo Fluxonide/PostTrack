@@ -64,12 +64,11 @@ function sha256(ascii: string): string {
 
   const mathPow = Math.pow;
   const maxWord = mathPow(2, 32);
-  let lengthProperty = "length";
   let i = 0, j = 0;
   let result = "";
 
   const words: number[] = [];
-  const asciiBitLength = ascii[lengthProperty] * 8;
+  const asciiBitLength = ascii.length * 8;
 
   let hash = [
     0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a,
@@ -87,7 +86,7 @@ function sha256(ascii: string): string {
     0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2,
   ];
 
-  for (i = 0; i < ascii[lengthProperty]; i++) {
+  for (i = 0; i < ascii.length; i++) {
     j = ascii.charCodeAt(i);
     words[i >> 2] |= j << ((3 - (i % 4)) * 8);
   }
@@ -95,7 +94,7 @@ function sha256(ascii: string): string {
   words[asciiBitLength >> 5] |= 0x80 << (24 - (asciiBitLength % 32));
   words[(((asciiBitLength + 64) >> 9) << 4) + 15] = asciiBitLength;
 
-  for (i = 0; i < words[lengthProperty]; i += 16) {
+  for (i = 0; i < words.length; i += 16) {
     const w: number[] = [];
     for (j = 0; j < 16; j++) w[j] = words[i + j] || 0;
     for (j = 16; j < 64; j++) {

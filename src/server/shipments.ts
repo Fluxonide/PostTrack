@@ -4,6 +4,7 @@ import { getCarrier } from "../carriers/registry";
 import { TrackingResult } from "../carriers/types";
 import { detectCarriers, AUTO_CARRIER } from "../carriers/detect";
 import { accumulateTrackingResult } from "./trackingHistory";
+import { markDirty } from "./dropboxSync";
 
 // Ensure cached_result column exists
 try {
@@ -204,13 +205,16 @@ export async function createShipment(
         now,
         existingRow.id
       );
-      return getShipmentById(existingRow.id, userId);
+      markDirty();
+      const updated = getShipmentById(existingRow.id, userId);
+      return updated || toShipment(existingRow);
     }
 
     if (cleanLabel && cleanLabel !== existingRow.label) {
       const updateStmt = db.prepare("UPDATE shipments SET label = ?, updated_at = ? WHERE id = ?");
       updateStmt.run(cleanLabel, now, existingRow.id);
       existingRow.label = cleanLabel;
+      markDirty();
     }
     return toShipment(existingRow);
   }
@@ -265,6 +269,7 @@ export async function createShipment(
     now,
     now
   );
+  markDirty();
 
   return {
     id,
@@ -305,6 +310,7 @@ export function updateShipment(
     WHERE id = ? AND user_id = ?
   `);
   stmt.run(newLabel, newAutoCheck, now, id, userId);
+  markDirty();
 
   return getShipmentById(id, userId);
 }
@@ -312,7 +318,11 @@ export function updateShipment(
 export function deleteShipment(id: string, userId: string): boolean {
   const stmt = db.prepare("DELETE FROM shipments WHERE id = ? AND user_id = ?");
   const result = stmt.run(id, userId);
-  return Number(result.changes) > 0;
+  const changed = Number(result.changes) > 0;
+  if (changed) {
+    markDirty();
+  }
+  return changed;
 }
 
 export async function syncShipment(id: string, userId: string): Promise<Shipment | null> {
@@ -378,6 +388,7 @@ export async function syncShipment(id: string, userId: string): Promise<Shipment
     id,
     userId
   );
+  markDirty();
 
   return getShipmentById(id, userId);
 }

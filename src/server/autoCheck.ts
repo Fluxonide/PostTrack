@@ -5,6 +5,7 @@ import { getCarrier } from "../carriers/registry";
 import { CarrierError, TrackingResult, TrackingEvent } from "../carriers/types";
 import { ShipmentRow, toShipment } from "./shipments";
 import { accumulateTrackingResult } from "./trackingHistory";
+import * as dropboxSync from "./dropboxSync";
 
 export interface ShipmentUpdateEvent {
   userId: string;
@@ -187,6 +188,7 @@ class AutoCheckWorker extends EventEmitter {
 
       if (hasStatusChange || hasEventChange) {
         console.log(`[AutoCheck] Update found for [${row.carrier}] ${row.tracking_number}: ${row.status} -> ${newStatus}`);
+        dropboxSync.markDirty();
         this.emit("update", {
           userId: row.user_id,
           shipmentId: row.id,
@@ -210,6 +212,7 @@ class AutoCheckWorker extends EventEmitter {
             now,
             row.id
           );
+          dropboxSync.markDirty();
           return;
         }
       }

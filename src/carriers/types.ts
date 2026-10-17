@@ -14,6 +14,7 @@ export interface TrackingEvent {
   location?: string;
   description: string;
   rawCode?: string;
+  statusText?: string;
 }
 
 export interface TrackingResult {
@@ -21,6 +22,7 @@ export interface TrackingResult {
   carrierName?: string;
   trackingNumber: string;
   status: ShipmentStatus;
+  statusText?: string;
   estimatedDelivery?: string;
   origin?: string;
   destination?: string;

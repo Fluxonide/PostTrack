@@ -27,6 +27,7 @@ import { autoCheckWorker } from "./autoCheck";
 import { telegramService } from "./telegram";
 import { db } from "./db";
 import { accumulateTrackingResult, getHistoryCache } from "./trackingHistory";
+import * as dropboxSync from "./dropboxSync";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = parseInt(process.env.PORT || process.env.WEB_API_PORT || "3001", 10);
@@ -296,6 +297,19 @@ const server = http.createServer(async (req, res) => {
       return sendJSON(res, 200, { limits: stats, worker });
     }
 
+    // Dropbox backup status and manual trigger
+    if (pathname === "/api/system/dropbox" && req.method === "GET") {
+      const status = await dropboxSync.getStatus();
+      return sendJSON(res, 200, status);
+    }
+
+    if (pathname === "/api/system/dropbox/sync" && req.method === "POST") {
+      const user = getAuthUser(req);
+      if (!user) return sendJSON(res, 401, { error: "unauthorized", message: "Not authenticated" });
+      const ok = await dropboxSync.runBackup(true);
+      return sendJSON(res, 200, { ok, message: ok ? "Backup completed successfully" : "Backup failed or Dropbox not configured" });
+    }
+
     // Detect carriers for tracking number
     if (pathname === "/api/detect") {
       const q = parsedUrl.searchParams.get("q") || "";
@@ -366,7 +380,7 @@ const server = http.createServer(async (req, res) => {
       const cleaned = trackingNumber.trim();
       const opts = { delhiveryToken: process.env.DELHIVERY_API_TOKEN };
 
-      const sessionUser = getSessionUser(req);
+      const sessionUser = getAuthUser(req);
 
       if (carrierParam === AUTO_CARRIER) {
         const candidates = detectCarriers(cleaned);
@@ -401,7 +415,7 @@ const server = http.createServer(async (req, res) => {
         if (hit) {
           const accumulated = accumulateTrackingResult(hit.carrier, cleaned, hit.result);
           if (sessionUser) {
-            createShipment(sessionUser.id, { carrier: hit.carrier, trackingNumber: cleaned }).catch(() => {});
+            createShipment(sessionUser.id, hit.carrier, cleaned).catch(() => {});
           }
           const { raw: _raw, ...publicResult } = accumulated;
           return sendJSON(res, 200, { ...publicResult, autoResolved: true });
@@ -412,7 +426,7 @@ const server = http.createServer(async (req, res) => {
           const archived = getHistoryCache(cId, cleaned);
           if (archived) {
             if (sessionUser) {
-              createShipment(sessionUser.id, { carrier: cId, trackingNumber: cleaned }).catch(() => {});
+              createShipment(sessionUser.id, cId, cleaned).catch(() => {});
             }
             const { raw: _raw, ...publicResult } = archived;
             return sendJSON(res, 200, {
@@ -443,7 +457,7 @@ const server = http.createServer(async (req, res) => {
         const result = await carrier.track(cleaned, opts);
         const accumulated = accumulateTrackingResult(carrierParam, cleaned, result);
         if (sessionUser) {
-          createShipment(sessionUser.id, { carrier: carrierParam, trackingNumber: cleaned }).catch(() => {});
+          createShipment(sessionUser.id, carrierParam, cleaned).catch(() => {});
         }
         const { raw: _raw, ...publicResult } = accumulated;
         return sendJSON(res, 200, publicResult);
@@ -456,7 +470,7 @@ const server = http.createServer(async (req, res) => {
             const archived = getHistoryCache(carrierParam, cleaned);
             if (archived) {
               if (sessionUser) {
-                createShipment(sessionUser.id, { carrier: carrierParam, trackingNumber: cleaned }).catch(() => {});
+                createShipment(sessionUser.id, carrierParam, cleaned).catch(() => {});
               }
               const { raw: _raw, ...publicResult } = archived;
               return sendJSON(res, 200, {
@@ -485,8 +499,22 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
-server.listen(PORT, () => {
+server.listen(PORT, async () => {
   console.log(`[PostTrack Server] Running at http://localhost:${PORT}`);
+
+  // Restore SQLite database from Dropbox if configured (essential for Render ephemeral disks)
+  if (dropboxSync.isConfigured()) {
+    try {
+      await dropboxSync.autoRestore();
+    } catch (err) {
+      console.error("[Dropbox] Auto-restore on startup failed:", err);
+    }
+    dropboxSync.startBackupScheduler();
+    dropboxSync.setupShutdownHooks();
+  } else {
+    console.log("[Dropbox] Sync disabled (DROPBOX_* env vars not set)");
+  }
+
   autoCheckWorker.start(30000);
   telegramService.init().catch((err) => console.error("[Telegram] Init error:", err));
 });

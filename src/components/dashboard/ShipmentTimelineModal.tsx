@@ -43,7 +43,10 @@ export const ShipmentTimelineModal: React.FC<ShipmentTimelineModalProps> = ({
         </div>
 
         <div style={{ overflowY: "auto", flex: 1, display: "flex", flexDirection: "column", gap: 20 }}>
-          <JourneyProgress events={shipment.cachedResult.events || []} />
+          <JourneyProgress
+            events={shipment.cachedResult.events || []}
+            status={shipment.cachedResult.status}
+          />
 
           <ShipmentMap
             origin={shipment.origin || undefined}

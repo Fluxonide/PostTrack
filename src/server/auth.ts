@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 import http from "node:http";
 import { db } from "./db";
+import { markDirty } from "./dropboxSync";
 
 export interface UserRow {
   id: string;
@@ -82,6 +83,7 @@ export function createUser(username: string, email: string, password: string): P
     "INSERT INTO users (id, username, email, password_hash, created_at) VALUES (?, ?, ?, ?, ?)"
   );
   insertStmt.run(id, cleanUsername, cleanEmail, passwordHash, now);
+  markDirty();
 
   return {
     id,

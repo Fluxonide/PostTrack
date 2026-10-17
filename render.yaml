@@ -1,0 +1,31 @@
+# Render Blueprint specification for PostTrack
+# https://render.com/docs/blueprint-spec
+
+services:
+  - type: web
+    name: posttrack
+    runtime: node
+    plan: free
+    region: oregon
+    buildCommand: npm install && npm run build
+    startCommand: npm run start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: 22.13.0
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: DROPBOX_PATH
+        value: /posttrack/posttrack.db
+      - key: DROPBOX_APP_KEY
+        sync: false
+      - key: DROPBOX_APP_SECRET
+        sync: false
+      - key: DROPBOX_REFRESH_TOKEN
+        sync: false
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: DELHIVERY_API_TOKEN
+        sync: false
