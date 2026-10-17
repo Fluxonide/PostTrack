@@ -102,6 +102,17 @@ export function getHistoryCache(carrier: string, trackingNumber: string): Tracki
     if (row && row.result_json) {
       return JSON.parse(row.result_json) as TrackingResult;
     }
+
+    // Fallback: check shipments table if not yet in tracking_history_cache
+    const shipStmt = db.prepare(`
+      SELECT cached_result FROM shipments
+      WHERE carrier = ? AND tracking_number = ? AND cached_result IS NOT NULL
+      ORDER BY updated_at DESC LIMIT 1
+    `);
+    const shipRow = shipStmt.get(carrier.toLowerCase(), trackingNumber.trim()) as { cached_result: string } | undefined;
+    if (shipRow && shipRow.cached_result) {
+      return JSON.parse(shipRow.cached_result) as TrackingResult;
+    }
   } catch (err) {
     console.warn("[TrackingHistory] Cache get error:", err);
   }

@@ -156,20 +156,64 @@ export async function createShipment(
     live = await fetchLiveTracking(cleanCarrier, cleanNumber);
   }
 
+  const now = new Date().toISOString();
+
   // Check if shipment already exists for this user
   const existingStmt = db.prepare("SELECT * FROM shipments WHERE user_id = ? AND carrier = ? AND tracking_number = ?");
   const existingRow = existingStmt.get(userId, resolvedCarrier, cleanNumber) as ShipmentRow | undefined;
   if (existingRow) {
+    if (live) {
+      const existingCached: TrackingResult | null = existingRow.cached_result
+        ? JSON.parse(existingRow.cached_result)
+        : null;
+      const accumulated = accumulateTrackingResult(resolvedCarrier, cleanNumber, live, existingCached);
+      const cachedJson = JSON.stringify(accumulated);
+      const newStatus = accumulated.status || existingRow.status;
+      const topEvent = accumulated.events && accumulated.events.length > 0
+        ? accumulated.events[accumulated.events.length - 1]
+        : null;
+      const newEventText = topEvent ? topEvent.statusText || topEvent.status : existingRow.last_event_text;
+      const newEventTime = topEvent ? topEvent.timestamp || null : existingRow.last_event_time;
+
+      const updateStmt = db.prepare(`
+        UPDATE shipments
+        SET label = COALESCE(?, label),
+            status = ?,
+            status_text = ?,
+            origin = ?,
+            destination = ?,
+            last_event_text = ?,
+            last_event_time = ?,
+            cached_result = ?,
+            last_checked_at = ?,
+            updated_at = ?
+        WHERE id = ?
+      `);
+      updateStmt.run(
+        cleanLabel || null,
+        newStatus,
+        accumulated.statusText || existingRow.status_text,
+        accumulated.origin || existingRow.origin,
+        accumulated.destination || existingRow.destination,
+        newEventText,
+        newEventTime,
+        cachedJson,
+        now,
+        now,
+        existingRow.id
+      );
+      return getShipmentById(existingRow.id, userId);
+    }
+
     if (cleanLabel && cleanLabel !== existingRow.label) {
       const updateStmt = db.prepare("UPDATE shipments SET label = ?, updated_at = ? WHERE id = ?");
-      updateStmt.run(cleanLabel, new Date().toISOString(), existingRow.id);
+      updateStmt.run(cleanLabel, now, existingRow.id);
       existingRow.label = cleanLabel;
     }
     return toShipment(existingRow);
   }
 
   const id = crypto.randomUUID();
-  const now = new Date().toISOString();
 
   const finalLive = live ? accumulateTrackingResult(resolvedCarrier, cleanNumber, live) : null;
 

@@ -198,8 +198,18 @@ class AutoCheckWorker extends EventEmitter {
         } as ShipmentUpdateEvent);
       }
     } catch (err) {
-      if (err instanceof CarrierError && err.code === "rate_limited") {
-        carrierRateLimiter.recordRateLimitHit(row.carrier);
+      if (err instanceof CarrierError) {
+        if (err.code === "rate_limited") {
+          carrierRateLimiter.recordRateLimitHit(row.carrier);
+        } else if (err.code === "not_found" && row.cached_result) {
+          // Carrier purged or expired this waybill; keep historical record permanently
+          console.log(`[AutoCheck] Carrier expired [${row.carrier}] ${row.tracking_number}; preserving archive.`);
+          db.prepare("UPDATE shipments SET auto_check = 0, last_checked_at = ?, next_check_at = NULL WHERE id = ?").run(
+            now,
+            row.id
+          );
+          return;
+        }
       }
       // Retry in 10 minutes on error
       const retryAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();

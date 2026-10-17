@@ -26,7 +26,7 @@ import { carrierRateLimiter } from "./rateLimiter";
 import { autoCheckWorker } from "./autoCheck";
 import { telegramService } from "./telegram";
 import { db } from "./db";
-import { accumulateTrackingResult } from "./trackingHistory";
+import { accumulateTrackingResult, getHistoryCache } from "./trackingHistory";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = parseInt(process.env.PORT || process.env.WEB_API_PORT || "3001", 10);
@@ -366,6 +366,8 @@ const server = http.createServer(async (req, res) => {
       const cleaned = trackingNumber.trim();
       const opts = { delhiveryToken: process.env.DELHIVERY_API_TOKEN };
 
+      const sessionUser = getSessionUser(req);
+
       if (carrierParam === AUTO_CARRIER) {
         const candidates = detectCarriers(cleaned);
         if (candidates.length === 0) {
@@ -398,8 +400,28 @@ const server = http.createServer(async (req, res) => {
         const hit = outcomes.find((o) => o.ok) as { ok: true; carrier: string; result: TrackingResult } | undefined;
         if (hit) {
           const accumulated = accumulateTrackingResult(hit.carrier, cleaned, hit.result);
+          if (sessionUser) {
+            createShipment(sessionUser.id, { carrier: hit.carrier, trackingNumber: cleaned }).catch(() => {});
+          }
           const { raw: _raw, ...publicResult } = accumulated;
           return sendJSON(res, 200, { ...publicResult, autoResolved: true });
+        }
+
+        // If live tracking returned nothing, check if any candidate has an archived tracking history
+        for (const cId of candidates) {
+          const archived = getHistoryCache(cId, cleaned);
+          if (archived) {
+            if (sessionUser) {
+              createShipment(sessionUser.id, { carrier: cId, trackingNumber: cleaned }).catch(() => {});
+            }
+            const { raw: _raw, ...publicResult } = archived;
+            return sendJSON(res, 200, {
+              ...publicResult,
+              autoResolved: true,
+              isArchived: true,
+              archiveNotice: "Preserved from PostTrack history archive (carrier record expired).",
+            });
+          }
         }
 
         return sendJSON(res, 404, {
@@ -420,12 +442,29 @@ const server = http.createServer(async (req, res) => {
       try {
         const result = await carrier.track(cleaned, opts);
         const accumulated = accumulateTrackingResult(carrierParam, cleaned, result);
+        if (sessionUser) {
+          createShipment(sessionUser.id, { carrier: carrierParam, trackingNumber: cleaned }).catch(() => {});
+        }
         const { raw: _raw, ...publicResult } = accumulated;
         return sendJSON(res, 200, publicResult);
       } catch (err) {
         if (err instanceof CarrierError) {
           if (err.code === "rate_limited") {
             carrierRateLimiter.recordRateLimitHit(carrierParam);
+          } else if (err.code === "not_found") {
+            // Check if we have an archived record in tracking history
+            const archived = getHistoryCache(carrierParam, cleaned);
+            if (archived) {
+              if (sessionUser) {
+                createShipment(sessionUser.id, { carrier: carrierParam, trackingNumber: cleaned }).catch(() => {});
+              }
+              const { raw: _raw, ...publicResult } = archived;
+              return sendJSON(res, 200, {
+                ...publicResult,
+                isArchived: true,
+                archiveNotice: "Preserved from PostTrack history archive (carrier record expired).",
+              });
+            }
           }
           return sendJSON(res, err.status, { error: err.code, message: err.message });
         }
