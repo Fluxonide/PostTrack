@@ -172,7 +172,9 @@ export async function createShipment(
       const topEvent = accumulated.events && accumulated.events.length > 0
         ? accumulated.events[accumulated.events.length - 1]
         : null;
-      const newEventText = topEvent ? topEvent.statusText || topEvent.status : existingRow.last_event_text;
+      const newEventText = topEvent
+        ? topEvent.description || topEvent.statusText || topEvent.status
+        : existingRow.last_event_text;
       const newEventTime = topEvent ? topEvent.timestamp || null : existingRow.last_event_time;
 
       const updateStmt = db.prepare(`
@@ -226,7 +228,7 @@ export async function createShipment(
   let lastEventTime: string | null = null;
   if (finalLive && finalLive.events && finalLive.events.length > 0) {
     const topEvent = finalLive.events[finalLive.events.length - 1];
-    lastEventText = topEvent.statusText || topEvent.status;
+    lastEventText = topEvent.description || topEvent.statusText || topEvent.status;
     lastEventTime = topEvent.timestamp || null;
   }
 
@@ -348,7 +350,7 @@ export async function syncShipment(id: string, userId: string): Promise<Shipment
   let lastEventTime = shipment.lastEventTime;
   if (finalLive.events && finalLive.events.length > 0) {
     const topEvent = finalLive.events[finalLive.events.length - 1];
-    lastEventText = topEvent.statusText || topEvent.status;
+    lastEventText = topEvent.description || topEvent.statusText || topEvent.status;
     lastEventTime = topEvent.timestamp || null;
   }
 

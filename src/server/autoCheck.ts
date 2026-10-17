@@ -135,7 +135,9 @@ class AutoCheckWorker extends EventEmitter {
       const topEvent = accumulated.events && accumulated.events.length > 0
         ? accumulated.events[accumulated.events.length - 1]
         : null;
-      const newEventText = topEvent ? topEvent.statusText || topEvent.status : null;
+      const newEventText = topEvent
+        ? topEvent.description || topEvent.statusText || topEvent.status
+        : null;
       const newEventTime = topEvent ? topEvent.timestamp || null : null;
 
       // Check if there is an update compared to previous state

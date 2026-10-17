@@ -123,7 +123,12 @@ class TelegramService {
     let message = `${statusEmoji} *Shipment Update*\n\n`;
     message += `📦 Package: ${displayName}\n`;
     message += `🔖 Tracking: \`${escapeMarkdown(evt.trackingNumber)}\`\n`;
-    message += `📊 Status: *${readableStatus}* _(was: ${oldReadableStatus})_\n`;
+
+    if (evt.newStatus !== evt.oldStatus && evt.oldStatus && evt.oldStatus !== "unknown") {
+      message += `📊 Status: *${readableStatus}* _(was: ${oldReadableStatus})_\n`;
+    } else {
+      message += `📊 Status: *${readableStatus}*\n`;
+    }
 
     if (evt.result.origin || evt.result.destination) {
       const route = [evt.result.origin, evt.result.destination].filter(Boolean).map(escapeMarkdown).join(" ➔ ");
@@ -131,10 +136,14 @@ class TelegramService {
     }
 
     if (evt.latestEvent) {
-      const eventText = evt.latestEvent.statusText || evt.latestEvent.status;
-      const eventTime = evt.latestEvent.timestamp ? `\n🕒 ${escapeMarkdown(evt.latestEvent.timestamp)}` : "";
+      const eventText =
+        evt.latestEvent.description ||
+        evt.latestEvent.statusText ||
+        formatStatus(evt.latestEvent.status);
+      const formattedTime = formatDateTime(evt.latestEvent.timestamp);
+      const eventTime = formattedTime ? `\n🕒 ${escapeMarkdown(formattedTime)}` : "";
       const eventLoc = evt.latestEvent.location ? `\n📍 ${escapeMarkdown(evt.latestEvent.location)}` : "";
-      message += `\n💬 *Latest Milestone*:\n${escapeMarkdown(eventText)}${eventLoc}${eventTime}`;
+      message += `\n💬 *Latest Milestone*:\n${escapeMarkdown(eventText)}${eventLoc}${eventTime}\n`;
     }
 
     await this.sendMessage(user.telegram_chat_id, message, { parseMode: "Markdown" });
@@ -165,7 +174,8 @@ class TelegramService {
     }
 
     if (shipment.lastEventText) {
-      const timeStr = shipment.lastEventTime ? ` _(${escapeMarkdown(shipment.lastEventTime)})_` : "";
+      const formattedTime = formatDateTime(shipment.lastEventTime);
+      const timeStr = formattedTime ? ` _(${escapeMarkdown(formattedTime)})_` : "";
       message += `\n💬 *Latest Milestone*:\n${escapeMarkdown(shipment.lastEventText)}${timeStr}\n`;
     }
 
@@ -367,4 +377,27 @@ function formatStatus(status: string): string {
   }
 }
 
+function formatDateTime(raw?: string | null): string {
+  if (!raw) return "";
+  const trimmed = raw.trim();
+  if (!trimmed) return "";
+
+  const parsed = new Date(trimmed);
+  if (!isNaN(parsed.getTime())) {
+    return parsed.toLocaleString("en-IN", {
+      timeZone: "Asia/Kolkata",
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+    });
+  }
+
+  // Remove trailing milliseconds or T if parsing wasn't exact
+  return trimmed.replace(/T/, " ").replace(/\.\d+.*$/, "");
+}
+
 export const telegramService = new TelegramService();
+
