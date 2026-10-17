@@ -228,7 +228,6 @@ export async function autoRestore(): Promise<void> {
   if (!isConfigured()) return;
 
   const dbPath = getDbPath();
-  let localExists = false;
   let localSize = 0;
   let stats = { userCount: 0, shipmentCount: 0, size: 0 };
 
@@ -236,42 +235,39 @@ export async function autoRestore(): Promise<void> {
     if (fs.existsSync(dbPath)) {
       const stat = fs.statSync(dbPath);
       localSize = stat.size;
-      localExists = localSize >= 4096;
-      if (localExists) {
-        stats = getDbStats();
-      }
+      stats = getDbStats();
     }
   } catch {}
 
-  // If local DB is completely empty (fresh container boot on Render), restore immediately
-  if (!localExists || (stats.userCount === 0 && stats.shipmentCount === 0)) {
-    console.log("[Dropbox] Fresh server instance detected — restoring database from Dropbox...");
-    try {
-      const restored = await restoreFromDropbox();
-      if (restored) {
-        lastDbHash = getDbFingerprint();
-        console.log("[Dropbox] Initial auto-restore complete ✓");
-        return;
-      }
-    } catch (err) {
-      console.warn("[Dropbox] Initial restore error (starting fresh):", err);
-      return;
-    }
-  }
-
-  // If local DB already exists, check remote metadata
   try {
     const remoteInfo = await getBackupInfo();
     if (!remoteInfo) {
-      console.log("[Dropbox] No remote backup on Dropbox — keeping local DB");
+      console.log("[Dropbox] No remote backup on Dropbox yet — keeping local DB");
       return;
     }
 
-    console.log(
-      `[Dropbox] Sync status: local has ${stats.userCount} users, ${stats.shipmentCount} shipments (${(localSize / 1048576).toFixed(2)} MB) | Dropbox has ${remoteInfo.sizeMB} MB (rev: ${remoteInfo.rev})`
-    );
+    // On fresh Render rebuilds or redeploys, local DB has 0 users & 0 shipments
+    const isFreshLocal = stats.userCount === 0 && stats.shipmentCount === 0;
+    const isRemoteBigger = remoteInfo.size > localSize;
+
+    if (isFreshLocal || isRemoteBigger) {
+      console.log(
+        `[Dropbox] Restoring database from Dropbox (local: ${stats.userCount} users, ${stats.shipmentCount} shipments | remote: ${remoteInfo.sizeMB} MB)...`
+      );
+      const restored = await restoreFromDropbox();
+      if (restored) {
+        lastDbHash = getDbFingerprint();
+        const newStats = getDbStats();
+        console.log(`[Dropbox] Auto-restore completed successfully ✓ (${newStats.userCount} users, ${newStats.shipmentCount} shipments)`);
+        return;
+      }
+    } else {
+      console.log(
+        `[Dropbox] Sync status: local has ${stats.userCount} users, ${stats.shipmentCount} shipments (${(localSize / 1048576).toFixed(2)} MB) | Dropbox has ${remoteInfo.sizeMB} MB (rev: ${remoteInfo.rev})`
+      );
+    }
   } catch (err) {
-    console.warn("[Dropbox] Metadata check error:", err);
+    console.warn("[Dropbox] Auto-restore error (proceeding with local DB):", err);
   }
 }
 
