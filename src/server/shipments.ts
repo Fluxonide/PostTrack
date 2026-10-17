@@ -3,6 +3,7 @@ import { db } from "./db";
 import { getCarrier } from "../carriers/registry";
 import { TrackingResult } from "../carriers/types";
 import { detectCarriers, AUTO_CARRIER } from "../carriers/detect";
+import { accumulateTrackingResult } from "./trackingHistory";
 
 // Ensure cached_result column exists
 try {
@@ -170,22 +171,24 @@ export async function createShipment(
   const id = crypto.randomUUID();
   const now = new Date().toISOString();
 
-  const status = live?.status || "unknown";
-  const statusText = live?.statusText || null;
-  const origin = live?.origin || null;
-  const destination = live?.destination || null;
+  const finalLive = live ? accumulateTrackingResult(resolvedCarrier, cleanNumber, live) : null;
+
+  const status = finalLive?.status || "unknown";
+  const statusText = finalLive?.statusText || null;
+  const origin = finalLive?.origin || null;
+  const destination = finalLive?.destination || null;
 
   let lastEventText: string | null = null;
   let lastEventTime: string | null = null;
-  if (live && live.events && live.events.length > 0) {
-    const topEvent = live.events[0];
+  if (finalLive && finalLive.events && finalLive.events.length > 0) {
+    const topEvent = finalLive.events[finalLive.events.length - 1];
     lastEventText = topEvent.statusText || topEvent.status;
     lastEventTime = topEvent.timestamp || null;
   }
 
   // Next check scheduled in 30 minutes if active
   const nextCheck = new Date(Date.now() + 30 * 60 * 1000).toISOString();
-  const cachedJson = live ? JSON.stringify(live) : null;
+  const cachedJson = finalLive ? JSON.stringify(finalLive) : null;
 
   const insertStmt = db.prepare(`
     INSERT INTO shipments (
@@ -232,7 +235,7 @@ export async function createShipment(
     autoCheck: true,
     lastCheckedAt: now,
     nextCheckAt: nextCheck,
-    cachedResult: live,
+    cachedResult: finalLive,
     createdAt: now,
     updatedAt: now,
   };
@@ -284,20 +287,28 @@ export async function syncShipment(id: string, userId: string): Promise<Shipment
     return getShipmentById(id, userId);
   }
 
-  const status = live.status || shipment.status;
-  const statusText = live.statusText || shipment.statusText;
-  const origin = live.origin || shipment.origin;
-  const destination = live.destination || shipment.destination;
+  // Accumulate tracking result, preserving all older scans and updates
+  const finalLive = accumulateTrackingResult(
+    shipment.carrier,
+    shipment.trackingNumber,
+    live,
+    shipment.cachedResult
+  );
+
+  const status = finalLive.status || shipment.status;
+  const statusText = finalLive.statusText || shipment.statusText;
+  const origin = finalLive.origin || shipment.origin;
+  const destination = finalLive.destination || shipment.destination;
 
   let lastEventText = shipment.lastEventText;
   let lastEventTime = shipment.lastEventTime;
-  if (live.events && live.events.length > 0) {
-    const topEvent = live.events[0];
+  if (finalLive.events && finalLive.events.length > 0) {
+    const topEvent = finalLive.events[finalLive.events.length - 1];
     lastEventText = topEvent.statusText || topEvent.status;
     lastEventTime = topEvent.timestamp || null;
   }
 
-  const cachedJson = JSON.stringify(live);
+  const cachedJson = JSON.stringify(finalLive);
 
   const updateStmt = db.prepare(`
     UPDATE shipments

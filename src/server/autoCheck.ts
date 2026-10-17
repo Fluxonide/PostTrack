@@ -4,6 +4,7 @@ import { carrierRateLimiter } from "./rateLimiter";
 import { getCarrier } from "../carriers/registry";
 import { CarrierError, TrackingResult, TrackingEvent } from "../carriers/types";
 import { ShipmentRow, toShipment } from "./shipments";
+import { accumulateTrackingResult } from "./trackingHistory";
 
 export interface ShipmentUpdateEvent {
   userId: string;
@@ -118,8 +119,22 @@ class AutoCheckWorker extends EventEmitter {
 
     try {
       const live = await carrier.track(row.tracking_number, opts);
-      const newStatus = live.status || "unknown";
-      const topEvent = live.events && live.events.length > 0 ? live.events[0] : null;
+      const existingCached: TrackingResult | null = row.cached_result
+        ? JSON.parse(row.cached_result)
+        : null;
+
+      // Accumulate tracking result, preserving all older scans and updates
+      const accumulated = accumulateTrackingResult(
+        row.carrier,
+        row.tracking_number,
+        live,
+        existingCached
+      );
+
+      const newStatus = accumulated.status || "unknown";
+      const topEvent = accumulated.events && accumulated.events.length > 0
+        ? accumulated.events[accumulated.events.length - 1]
+        : null;
       const newEventText = topEvent ? topEvent.statusText || topEvent.status : null;
       const newEventTime = topEvent ? topEvent.timestamp || null : null;
 
@@ -143,7 +158,7 @@ class AutoCheckWorker extends EventEmitter {
 
       const nextCheckAt = isFinished ? null : new Date(Date.now() + nextDelayMs).toISOString();
       const autoCheckVal = isFinished ? 0 : 1;
-      const cachedJson = JSON.stringify(live);
+      const cachedJson = JSON.stringify(accumulated);
 
       const updateStmt = db.prepare(`
         UPDATE shipments
@@ -155,9 +170,9 @@ class AutoCheckWorker extends EventEmitter {
 
       updateStmt.run(
         newStatus,
-        live.statusText || row.status_text,
-        live.origin || row.origin,
-        live.destination || row.destination,
+        accumulated.statusText || row.status_text,
+        accumulated.origin || row.origin,
+        accumulated.destination || row.destination,
         newEventText || row.last_event_text,
         newEventTime || row.last_event_time,
         cachedJson,
@@ -179,7 +194,7 @@ class AutoCheckWorker extends EventEmitter {
           oldStatus: row.status,
           newStatus,
           latestEvent: topEvent,
-          result: live,
+          result: accumulated,
         } as ShipmentUpdateEvent);
       }
     } catch (err) {

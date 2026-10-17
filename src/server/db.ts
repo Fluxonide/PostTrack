@@ -69,4 +69,16 @@ db.exec(`
     display_name TEXT,
     created_at TEXT NOT NULL
   );
+
+  CREATE TABLE IF NOT EXISTS tracking_history_cache (
+    carrier TEXT NOT NULL,
+    tracking_number TEXT NOT NULL,
+    status TEXT NOT NULL,
+    origin TEXT,
+    destination TEXT,
+    result_json TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    PRIMARY KEY (carrier, tracking_number)
+  );
 `);
+

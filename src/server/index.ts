@@ -26,6 +26,7 @@ import { carrierRateLimiter } from "./rateLimiter";
 import { autoCheckWorker } from "./autoCheck";
 import { telegramService } from "./telegram";
 import { db } from "./db";
+import { accumulateTrackingResult } from "./trackingHistory";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = parseInt(process.env.PORT || process.env.WEB_API_PORT || "3001", 10);
@@ -396,7 +397,8 @@ const server = http.createServer(async (req, res) => {
 
         const hit = outcomes.find((o) => o.ok) as { ok: true; carrier: string; result: TrackingResult } | undefined;
         if (hit) {
-          const { raw: _raw, ...publicResult } = hit.result;
+          const accumulated = accumulateTrackingResult(hit.carrier, cleaned, hit.result);
+          const { raw: _raw, ...publicResult } = accumulated;
           return sendJSON(res, 200, { ...publicResult, autoResolved: true });
         }
 
@@ -417,7 +419,8 @@ const server = http.createServer(async (req, res) => {
 
       try {
         const result = await carrier.track(cleaned, opts);
-        const { raw: _raw, ...publicResult } = result;
+        const accumulated = accumulateTrackingResult(carrierParam, cleaned, result);
+        const { raw: _raw, ...publicResult } = accumulated;
         return sendJSON(res, 200, publicResult);
       } catch (err) {
         if (err instanceof CarrierError) {
