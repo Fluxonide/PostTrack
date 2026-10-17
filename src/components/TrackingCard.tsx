@@ -5,6 +5,7 @@ import { formatCarrierDate, formatEta, displayCarrierDate, parseCarrierDate } fr
 import { humanStatus } from "../lib/status";
 import { showToast } from "../lib/toast";
 import { JourneyProgress } from "./JourneyProgress";
+import { useAuth } from "../lib/authContext";
 
 interface TrackingCardProps {
   result: TrackingResult;
@@ -12,6 +13,7 @@ interface TrackingCardProps {
   isRefreshing: boolean;
   onUpdateLabel?: (trackingNumber: string, label: string) => void;
   customLabel?: string;
+  onOpenAuth?: () => void;
 }
 
 export const TrackingCard: React.FC<TrackingCardProps> = ({
@@ -20,10 +22,46 @@ export const TrackingCard: React.FC<TrackingCardProps> = ({
   isRefreshing,
   onUpdateLabel,
   customLabel,
+  onOpenAuth,
 }) => {
+  const { user, token } = useAuth();
   const [filterQuery, setFilterQuery] = useState("");
   const [isEditingLabel, setIsEditingLabel] = useState(false);
   const [labelInput, setLabelInput] = useState(customLabel || "");
+  const [isSaving, setIsSaving] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
+
+  const handleSaveToDashboard = async () => {
+    if (!user || !token) {
+      onOpenAuth?.();
+      return;
+    }
+    setIsSaving(true);
+    try {
+      const res = await fetch("/api/shipments", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          carrier: result.carrier,
+          trackingNumber: result.trackingNumber,
+          label: customLabel || undefined,
+        }),
+      });
+      if (res.ok) {
+        setIsSaved(true);
+        showToast("Shipment saved to your dashboard!");
+      } else {
+        showToast("Could not save to dashboard.", "error");
+      }
+    } catch {
+      showToast("Network error.", "error");
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   const etaText = formatEta(result.estimatedDelivery);
 
@@ -184,6 +222,21 @@ export const TrackingCard: React.FC<TrackingCardProps> = ({
               Tag
             </button>
           )}
+
+          <button
+            type="button"
+            className="export-btn"
+            onClick={handleSaveToDashboard}
+            disabled={isSaving || isSaved}
+            style={
+              isSaved
+                ? { color: "var(--color-success)", borderColor: "rgba(74, 222, 128, 0.4)" }
+                : undefined
+            }
+            title={user ? "Save package to your dashboard for auto-tracking" : "Sign in to save"}
+          >
+            {isSaved ? "✓ In Dashboard" : isSaving ? "Saving…" : "+ Save to Dashboard"}
+          </button>
 
           <button
             type="button"
