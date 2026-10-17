@@ -128,6 +128,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
       showToast("Shipment added to dashboard!");
       setIsAddOpen(false);
+      setNewCarrier(AUTO_CARRIER);
       setNewTracking("");
       setNewLabel("");
       fetchShipments();
@@ -802,6 +803,44 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                     boxSizing: "border-box",
                   }}
                 />
+                {newCarrier === AUTO_CARRIER && newTracking.trim().length > 3 && (
+                  <div
+                    style={{
+                      marginTop: 8,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 6,
+                      fontSize: 12,
+                      flexWrap: "wrap",
+                    }}
+                  >
+                    <span style={{ color: "var(--text-3)" }}>Detected:</span>
+                    {detectCarriers(newTracking.trim()).length > 0 ? (
+                      detectCarriers(newTracking.trim()).map((c) => (
+                        <span
+                          key={c}
+                          style={{
+                            padding: "2px 8px",
+                            background: "rgba(192, 133, 50, 0.15)",
+                            border: "1px solid var(--accent)",
+                            color: "var(--accent)",
+                            borderRadius: 4,
+                            fontFamily: "var(--mono)",
+                            fontSize: 11,
+                            textTransform: "uppercase",
+                            fontWeight: 600,
+                          }}
+                        >
+                          {formatCarrierName(c)}
+                        </span>
+                      ))
+                    ) : (
+                      <span style={{ color: "var(--text-3)", fontStyle: "italic" }}>
+                        Format not recognized yet — will attempt matching on save
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
 
               <div>
