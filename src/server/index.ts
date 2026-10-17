@@ -14,6 +14,14 @@ import {
   deleteSession,
   getAuthUser,
 } from "./auth";
+import {
+  getUserShipments,
+  getShipmentById,
+  createShipment,
+  updateShipment,
+  deleteShipment,
+  syncShipment,
+} from "./shipments";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = parseInt(process.env.PORT || process.env.WEB_API_PORT || "3001", 10);
@@ -155,6 +163,70 @@ const server = http.createServer(async (req, res) => {
         deleteSession(token);
       }
       return sendJSON(res, 200, { ok: true });
+    }
+
+    // Shipments endpoints (Protected)
+    if (pathname === "/api/shipments" && req.method === "GET") {
+      const user = getAuthUser(req);
+      if (!user) return sendJSON(res, 401, { error: "unauthorized", message: "Not authenticated" });
+      const shipments = getUserShipments(user.id);
+      return sendJSON(res, 200, { shipments, total: shipments.length });
+    }
+
+    if (pathname === "/api/shipments" && req.method === "POST") {
+      const user = getAuthUser(req);
+      if (!user) return sendJSON(res, 401, { error: "unauthorized", message: "Not authenticated" });
+      const { carrier, trackingNumber, label } = await readJSONBody<{
+        carrier?: string;
+        trackingNumber?: string;
+        label?: string;
+      }>(req);
+      if (!carrier || !trackingNumber) {
+        return sendJSON(res, 400, { error: "bad_request", message: "Carrier and trackingNumber are required." });
+      }
+      try {
+        const shipment = await createShipment(user.id, carrier, trackingNumber, label);
+        return sendJSON(res, 201, { shipment });
+      } catch (err) {
+        return sendJSON(res, 400, { error: "error", message: (err as Error).message });
+      }
+    }
+
+    if (pathname.startsWith("/api/shipments/")) {
+      const subPath = pathname.slice("/api/shipments/".length);
+      const [shipmentId, action] = subPath.split("/");
+
+      if (shipmentId && !action) {
+        const user = getAuthUser(req);
+        if (!user) return sendJSON(res, 401, { error: "unauthorized", message: "Not authenticated" });
+
+        if (req.method === "GET") {
+          const shipment = getShipmentById(shipmentId, user.id);
+          if (!shipment) return sendJSON(res, 404, { error: "not_found", message: "Shipment not found" });
+          return sendJSON(res, 200, { shipment });
+        }
+
+        if (req.method === "PATCH") {
+          const updates = await readJSONBody<{ label?: string; autoCheck?: boolean }>(req);
+          const updated = updateShipment(shipmentId, user.id, updates);
+          if (!updated) return sendJSON(res, 404, { error: "not_found", message: "Shipment not found" });
+          return sendJSON(res, 200, { shipment: updated });
+        }
+
+        if (req.method === "DELETE") {
+          const ok = deleteShipment(shipmentId, user.id);
+          if (!ok) return sendJSON(res, 404, { error: "not_found", message: "Shipment not found" });
+          return sendJSON(res, 200, { ok: true });
+        }
+      }
+
+      if (shipmentId && action === "sync" && req.method === "POST") {
+        const user = getAuthUser(req);
+        if (!user) return sendJSON(res, 401, { error: "unauthorized", message: "Not authenticated" });
+        const synced = await syncShipment(shipmentId, user.id);
+        if (!synced) return sendJSON(res, 404, { error: "not_found", message: "Shipment not found" });
+        return sendJSON(res, 200, { shipment: synced });
+      }
     }
 
     // Health check
