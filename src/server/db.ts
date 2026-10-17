@@ -61,4 +61,12 @@ db.exec(`
 
   CREATE INDEX IF NOT EXISTS idx_shipments_user_id ON shipments(user_id);
   CREATE INDEX IF NOT EXISTS idx_shipments_auto_check ON shipments(auto_check, next_check_at);
+
+  CREATE TABLE IF NOT EXISTS geo_cache (
+    query TEXT PRIMARY KEY COLLATE NOCASE,
+    lat REAL NOT NULL,
+    lng REAL NOT NULL,
+    display_name TEXT,
+    created_at TEXT NOT NULL
+  );
 `);
