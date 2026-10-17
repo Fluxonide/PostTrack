@@ -15,6 +15,7 @@ import { useAuth } from "../lib/authContext";
 import { showToast } from "../lib/toast";
 import { TrackingResult } from "../carriers/types";
 import { JourneyProgress } from "./JourneyProgress";
+import { detectCarriers, AUTO_CARRIER } from "../carriers/detect";
 
 interface ShipmentItem {
   id: string;
@@ -40,6 +41,7 @@ interface DashboardViewProps {
 }
 
 const CARRIER_LIST = [
+  { id: AUTO_CARRIER, name: "⚡ Auto Detect (Recommended)" },
   { id: "bluedart", name: "Blue Dart" },
   { id: "delhivery", name: "Delhivery" },
   { id: "ekart", name: "Ekart" },
@@ -62,7 +64,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
   // Add shipment modal state
   const [isAddOpen, setIsAddOpen] = useState(false);
-  const [newCarrier, setNewCarrier] = useState("delhivery");
+  const [newCarrier, setNewCarrier] = useState(AUTO_CARRIER);
   const [newTracking, setNewTracking] = useState("");
   const [newLabel, setNewLabel] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
