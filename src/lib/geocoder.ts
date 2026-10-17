@@ -305,12 +305,9 @@ export async function extractJourneyPoints(params: {
     // Clone events; if descending (newest first), reverse them so journey flows in sequence
     const chronologicalEvents = [...params.events];
     // Check if events are descending by comparing timestamps if available
-    if (
-      chronologicalEvents.length > 1 &&
-      chronologicalEvents[0].timestamp &&
-      chronologicalEvents[chronologicalEvents.length - 1].timestamp &&
-      new Date(chronologicalEvents[0].timestamp) > new Date(chronologicalEvents[chronologicalEvents.length - 1].timestamp)
-    ) {
+    const firstTs = chronologicalEvents[0]?.timestamp;
+    const lastTs = chronologicalEvents[chronologicalEvents.length - 1]?.timestamp;
+    if (firstTs && lastTs && new Date(firstTs) > new Date(lastTs)) {
       chronologicalEvents.reverse();
     }
 

@@ -2,6 +2,7 @@ import crypto from "node:crypto";
 import { db } from "./db";
 import { autoCheckWorker, ShipmentUpdateEvent } from "./autoCheck";
 import type { Shipment } from "./shipments";
+import { parseCarrierDate } from "../lib/dates";
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || "";
 const API_BASE = `https://api.telegram.org/bot${BOT_TOKEN}`;
@@ -131,7 +132,7 @@ class TelegramService {
     }
 
     if (evt.result.origin || evt.result.destination) {
-      const route = [evt.result.origin, evt.result.destination].filter(Boolean).map(escapeMarkdown).join(" ➔ ");
+      const route = [evt.result.origin, evt.result.destination].filter((s): s is string => Boolean(s)).map(escapeMarkdown).join(" ➔ ");
       message += `🗺️ Route: ${route}\n`;
     }
 
@@ -169,7 +170,7 @@ class TelegramService {
     message += `📊 Status: ${statusEmoji} *${readableStatus}*\n`;
 
     if (shipment.origin || shipment.destination) {
-      const route = [shipment.origin, shipment.destination].filter(Boolean).map(escapeMarkdown).join(" ➔ ");
+      const route = [shipment.origin, shipment.destination].filter((s): s is string => Boolean(s)).map(escapeMarkdown).join(" ➔ ");
       message += `🗺️ Route: ${route}\n`;
     }
 
@@ -382,8 +383,9 @@ function formatDateTime(raw?: string | null): string {
   const trimmed = raw.trim();
   if (!trimmed) return "";
 
-  const parsed = new Date(trimmed);
-  if (!isNaN(parsed.getTime())) {
+  // Parse Indian carrier timestamps (which are often naive ISO in IST) accurately
+  const parsed = parseCarrierDate(trimmed) || new Date(trimmed);
+  if (parsed && !isNaN(parsed.getTime())) {
     return parsed.toLocaleString("en-IN", {
       timeZone: "Asia/Kolkata",
       day: "2-digit",

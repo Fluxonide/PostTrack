@@ -2,6 +2,7 @@ import React from "react";
 import { ShipmentItem } from "./types";
 import { JourneyProgress } from "../JourneyProgress";
 import { ShipmentMap } from "../ShipmentMap";
+import { displayCarrierDate } from "../../lib/dates";
 
 interface ShipmentTimelineModalProps {
   shipment: ShipmentItem | null;
@@ -43,7 +44,10 @@ export const ShipmentTimelineModal: React.FC<ShipmentTimelineModalProps> = ({
         </div>
 
         <div style={{ overflowY: "auto", flex: 1, display: "flex", flexDirection: "column", gap: 20 }}>
-          <JourneyProgress events={shipment.cachedResult.events || []} />
+          <JourneyProgress
+            events={shipment.cachedResult.events || []}
+            status={shipment.cachedResult.status}
+          />
 
           <ShipmentMap
             origin={shipment.origin || undefined}
@@ -69,7 +73,9 @@ export const ShipmentTimelineModal: React.FC<ShipmentTimelineModalProps> = ({
                 >
                   <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
                     <span style={{ fontWeight: 600, color: "var(--text)" }}>{ev.statusText || ev.status}</span>
-                    <span style={{ fontSize: 11, color: "var(--text-3)", fontFamily: "var(--mono)" }}>{ev.timestamp}</span>
+                    <span style={{ fontSize: 11, color: "var(--text-3)", fontFamily: "var(--mono)" }}>
+                      {displayCarrierDate(ev.timestamp).text}
+                    </span>
                   </div>
                   {ev.location && (
                     <div style={{ fontSize: 12, color: "var(--accent)" }}>📍 {ev.location}</div>

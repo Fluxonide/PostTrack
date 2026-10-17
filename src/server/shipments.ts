@@ -204,7 +204,8 @@ export async function createShipment(
         now,
         existingRow.id
       );
-      return getShipmentById(existingRow.id, userId);
+      const updated = getShipmentById(existingRow.id, userId);
+      return updated || toShipment(existingRow);
     }
 
     if (cleanLabel && cleanLabel !== existingRow.label) {
