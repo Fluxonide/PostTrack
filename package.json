@@ -10,9 +10,11 @@
     "start": "npx tsx src/server/index.ts"
   },
   "dependencies": {
+    "@types/leaflet": "^1.9.22",
     "canvas-confetti": "^1.9.4",
     "clsx": "^2.1.1",
     "dotenv": "^16.4.7",
+    "leaflet": "^1.9.4",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-icons": "^5.4.0"
