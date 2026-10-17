@@ -25,6 +25,7 @@ import {
 import { carrierRateLimiter } from "./rateLimiter";
 import { autoCheckWorker } from "./autoCheck";
 import { telegramService } from "./telegram";
+import { db } from "./db";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = parseInt(process.env.PORT || process.env.WEB_API_PORT || "3001", 10);
@@ -299,6 +300,58 @@ const server = http.createServer(async (req, res) => {
       const q = parsedUrl.searchParams.get("q") || "";
       const matches = detectCarriers(q);
       return sendJSON(res, 200, { query: q, candidates: matches });
+    }
+
+    // Geocode endpoint with persistent SQLite caching
+    if (pathname === "/api/geocode") {
+      const q = (parsedUrl.searchParams.get("q") || "").trim();
+      if (!q) {
+        return sendJSON(res, 400, { error: "bad_request", message: "Query parameter 'q' is required." });
+      }
+
+      const cleanQuery = q.toLowerCase();
+
+      // Guard against ambiguous directional single words
+      const AMBIGUOUS = new Set(["north", "south", "east", "west", "central", "northeast", "northwest", "southeast", "southwest"]);
+      if (AMBIGUOUS.has(cleanQuery) || cleanQuery.length < 3) {
+        return sendJSON(res, 400, { error: "ambiguous_location", message: `Location '${q}' is too ambiguous.` });
+      }
+
+      // Check SQLite cache
+      const cachedStmt = db.prepare("SELECT lat, lng, display_name FROM geo_cache WHERE query = ?");
+      const cached = cachedStmt.get(cleanQuery) as { lat: number; lng: number; display_name: string | null } | undefined;
+      if (cached) {
+        return sendJSON(res, 200, { lat: cached.lat, lng: cached.lng, displayName: cached.display_name, cached: true });
+      }
+
+      // Query OpenStreetMap Nominatim
+      try {
+        const osmUrl = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q + ", India")}&format=json&limit=1`;
+        const osmRes = await fetch(osmUrl, {
+          headers: { "User-Agent": "PostTrack-Server/1.0" },
+        });
+
+        if (osmRes.ok) {
+          const data = (await osmRes.json()) as Array<{ lat: string; lon: string; display_name?: string }>;
+          if (data && data.length > 0) {
+            const lat = parseFloat(data[0].lat);
+            const lng = parseFloat(data[0].lon);
+            const displayName = data[0].display_name || q;
+
+            // Save to SQLite cache
+            const insertStmt = db.prepare(
+              "INSERT OR REPLACE INTO geo_cache (query, lat, lng, display_name, created_at) VALUES (?, ?, ?, ?, ?)"
+            );
+            insertStmt.run(cleanQuery, lat, lng, displayName, new Date().toISOString());
+
+            return sendJSON(res, 200, { lat, lng, displayName, cached: false });
+          }
+        }
+      } catch (err) {
+        console.warn("[Geocode] Upstream error:", err);
+      }
+
+      return sendJSON(res, 404, { error: "not_found", message: `Could not resolve coordinates for '${q}'` });
     }
 
     // Track endpoint: /api/track/:carrier/:tracking
