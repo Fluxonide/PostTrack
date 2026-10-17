@@ -322,48 +322,6 @@ export const ShipmentMap: React.FC<ShipmentMapProps> = ({
           </div>
         )}
       </div>
-
-      {/* Route Checkpoint Badges Footer */}
-      {points.length > 0 && (
-        <div
-          style={{
-            padding: "8px 14px",
-            background: "var(--color-bg)",
-            borderTop: "1px solid var(--border)",
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-            overflowX: "auto",
-            fontSize: 11,
-          }}
-        >
-          <span style={{ color: "var(--text-3)", whiteSpace: "nowrap" }}>Route:</span>
-          {points.map((pt, idx) => (
-            <React.Fragment key={idx}>
-              <span
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 4,
-                  padding: "2px 8px",
-                  borderRadius: 4,
-                  background: pt.isLatest ? "rgba(192, 133, 50, 0.2)" : "var(--color-surface)",
-                  color: pt.isLatest ? "var(--accent)" : pt.isDestination ? "var(--color-success)" : "var(--text)",
-                  border: pt.isLatest ? "1px solid var(--accent)" : "1px solid var(--border)",
-                  whiteSpace: "nowrap",
-                  fontWeight: pt.isLatest ? 600 : 400,
-                }}
-              >
-                <span>{pt.name}</span>
-                {pt.isLatest && <span style={{ fontSize: 9 }}>●</span>}
-              </span>
-              {idx < points.length - 1 && (
-                <span style={{ color: "var(--text-3)" }}>➔</span>
-              )}
-            </React.Fragment>
-          ))}
-        </div>
-      )}
     </div>
   );
 };
