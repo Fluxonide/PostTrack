@@ -390,4 +390,5 @@ const server = http.createServer(async (req, res) => {
 server.listen(PORT, () => {
   console.log(`[PostTrack Server] Running at http://localhost:${PORT}`);
   autoCheckWorker.start(30000);
+  telegramService.init().catch((err) => console.error("[Telegram] Init error:", err));
 });
