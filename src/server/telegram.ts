@@ -2,6 +2,7 @@ import crypto from "node:crypto";
 import { db } from "./db";
 import { autoCheckWorker, ShipmentUpdateEvent } from "./autoCheck";
 import type { Shipment } from "./shipments";
+import { parseCarrierDate } from "../lib/dates";
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || "";
 const API_BASE = `https://api.telegram.org/bot${BOT_TOKEN}`;
@@ -382,8 +383,10 @@ function formatDateTime(raw?: string | null): string {
   const trimmed = raw.trim();
   if (!trimmed) return "";
 
-  const parsed = new Date(trimmed);
-  if (!isNaN(parsed.getTime())) {
+  // Indian carriers report timestamps already in IST (often naive ISO strings without timezone).
+  // parseCarrierDate parses them properly in IST instead of misinterpreting them as UTC.
+  const parsed = parseCarrierDate(trimmed) || new Date(trimmed);
+  if (parsed && !isNaN(parsed.getTime())) {
     return parsed.toLocaleString("en-IN", {
       timeZone: "Asia/Kolkata",
       day: "2-digit",
