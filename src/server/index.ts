@@ -22,6 +22,8 @@ import {
   deleteShipment,
   syncShipment,
 } from "./shipments";
+import { carrierRateLimiter } from "./rateLimiter";
+import { autoCheckWorker } from "./autoCheck";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = parseInt(process.env.PORT || process.env.WEB_API_PORT || "3001", 10);
@@ -251,6 +253,13 @@ const server = http.createServer(async (req, res) => {
       return sendJSON(res, 200, { carriers: list, total: list.length });
     }
 
+    // Rate limits and worker status
+    if (pathname === "/api/limits" || pathname === "/api/system/limits") {
+      const stats = carrierRateLimiter.getStats();
+      const worker = autoCheckWorker.getStatus();
+      return sendJSON(res, 200, { limits: stats, worker });
+    }
+
     // Detect carriers for tracking number
     if (pathname === "/api/detect") {
       const q = parsedUrl.searchParams.get("q") || "";
@@ -317,12 +326,17 @@ const server = http.createServer(async (req, res) => {
         return sendJSON(res, 404, { error: "carrier_not_supported", carrier: carrierParam });
       }
 
+      carrierRateLimiter.recordRequest(carrierParam);
+
       try {
         const result = await carrier.track(cleaned, opts);
         const { raw: _raw, ...publicResult } = result;
         return sendJSON(res, 200, publicResult);
       } catch (err) {
         if (err instanceof CarrierError) {
+          if (err.code === "rate_limited") {
+            carrierRateLimiter.recordRateLimitHit(carrierParam);
+          }
           return sendJSON(res, err.status, { error: err.code, message: err.message });
         }
         console.error(`[Carrier Error: ${carrierParam}]`, err);
@@ -344,4 +358,5 @@ const server = http.createServer(async (req, res) => {
 
 server.listen(PORT, () => {
   console.log(`[PostTrack Server] Running at http://localhost:${PORT}`);
+  autoCheckWorker.start(30000);
 });
