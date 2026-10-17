@@ -6,6 +6,14 @@ import "dotenv/config";
 import { getCarrier, listCarriers } from "../carriers/registry";
 import { detectCarriers, AUTO_CARRIER } from "../carriers/detect";
 import { CarrierError, TrackingResult } from "../carriers/types";
+import {
+  createUser,
+  verifyUserLogin,
+  createSession,
+  getSessionUser,
+  deleteSession,
+  getAuthUser,
+} from "./auth";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = parseInt(process.env.PORT || process.env.WEB_API_PORT || "3001", 10);
@@ -16,10 +24,33 @@ function sendJSON(res: http.ServerResponse, status: number, data: unknown): void
     "Content-Type": "application/json; charset=utf-8",
     "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Headers": "Content-Type, Authorization",
-    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-    "Cache-Control": status === 200 ? "public, s-maxage=120, stale-while-revalidate=300" : "no-store",
+    "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
+    "Cache-Control": status === 200 && !res.req?.url?.startsWith("/api/auth") ? "public, s-maxage=120, stale-while-revalidate=300" : "no-store",
   });
   res.end(json);
+}
+
+function readJSONBody<T = Record<string, unknown>>(req: http.IncomingMessage): Promise<T> {
+  return new Promise((resolve, reject) => {
+    let body = "";
+    req.on("data", (chunk) => {
+      body += chunk;
+      if (body.length > 1024 * 1024) {
+        reject(new Error("Request payload too large"));
+      }
+    });
+    req.on("end", () => {
+      if (!body.trim()) {
+        return resolve({} as T);
+      }
+      try {
+        resolve(JSON.parse(body) as T);
+      } catch {
+        reject(new Error("Invalid JSON body"));
+      }
+    });
+    req.on("error", reject);
+  });
 }
 
 const MIME_TYPES: Record<string, string> = {
@@ -69,7 +100,7 @@ const server = http.createServer(async (req, res) => {
     res.writeHead(204, {
       "Access-Control-Allow-Origin": "*",
       "Access-Control-Allow-Headers": "Content-Type, Authorization",
-      "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+      "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
     });
     return res.end();
   }
@@ -79,6 +110,53 @@ const server = http.createServer(async (req, res) => {
   const pathname = parsedUrl.pathname;
 
   try {
+    // Auth endpoints
+    if (pathname === "/api/auth/register" && req.method === "POST") {
+      const body = await readJSONBody<{ username?: string; email?: string; password?: string }>(req);
+      const { username, email, password } = body;
+      if (!username || !email || !password) {
+        return sendJSON(res, 400, { error: "bad_request", message: "Username, email, and password are required." });
+      }
+      try {
+        const user = createUser(username, email, password);
+        const session = createSession(user.id);
+        return sendJSON(res, 201, { user, token: session.token, expiresAt: session.expiresAt });
+      } catch (err) {
+        return sendJSON(res, 400, { error: "validation_error", message: (err as Error).message });
+      }
+    }
+
+    if (pathname === "/api/auth/login" && req.method === "POST") {
+      const body = await readJSONBody<{ login?: string; password?: string }>(req);
+      const { login, password } = body;
+      if (!login || !password) {
+        return sendJSON(res, 400, { error: "bad_request", message: "Username/email and password are required." });
+      }
+      const user = verifyUserLogin(login, password);
+      if (!user) {
+        return sendJSON(res, 401, { error: "unauthorized", message: "Invalid username/email or password." });
+      }
+      const session = createSession(user.id);
+      return sendJSON(res, 200, { user, token: session.token, expiresAt: session.expiresAt });
+    }
+
+    if (pathname === "/api/auth/me" && req.method === "GET") {
+      const user = getAuthUser(req);
+      if (!user) {
+        return sendJSON(res, 401, { error: "unauthorized", message: "Not authenticated" });
+      }
+      return sendJSON(res, 200, { user });
+    }
+
+    if (pathname === "/api/auth/logout" && req.method === "POST") {
+      const authHeader = req.headers.authorization;
+      const token = authHeader?.match(/^Bearer\s+(.+)$/i)?.[1]?.trim();
+      if (token) {
+        deleteSession(token);
+      }
+      return sendJSON(res, 200, { ok: true });
+    }
+
     // Health check
     if (pathname === "/api/health" || pathname === "/health") {
       const uptime = process.uptime();
