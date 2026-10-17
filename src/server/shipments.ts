@@ -2,6 +2,7 @@ import crypto from "node:crypto";
 import { db } from "./db";
 import { getCarrier } from "../carriers/registry";
 import { TrackingResult } from "../carriers/types";
+import { detectCarriers, AUTO_CARRIER } from "../carriers/detect";
 
 // Ensure cached_result column exists
 try {
@@ -124,9 +125,39 @@ export async function createShipment(
     throw new Error("Carrier and tracking number are required.");
   }
 
+  let resolvedCarrier = cleanCarrier;
+  let live: TrackingResult | null = null;
+
+  if (cleanCarrier === AUTO_CARRIER || cleanCarrier === "auto") {
+    const candidates = detectCarriers(cleanNumber);
+    if (candidates.length === 0) {
+      throw new Error("Tracking number format was not recognised. Please select a specific carrier from the list.");
+    }
+
+    // Try candidate carriers in priority order to find live match
+    for (const cand of candidates) {
+      const res = await fetchLiveTracking(cand, cleanNumber);
+      if (res && res.status !== "unknown") {
+        resolvedCarrier = cand;
+        live = res;
+        break;
+      }
+      if (res && !live) {
+        resolvedCarrier = cand;
+        live = res;
+      }
+    }
+
+    if (!live) {
+      resolvedCarrier = candidates[0];
+    }
+  } else {
+    live = await fetchLiveTracking(cleanCarrier, cleanNumber);
+  }
+
   // Check if shipment already exists for this user
   const existingStmt = db.prepare("SELECT * FROM shipments WHERE user_id = ? AND carrier = ? AND tracking_number = ?");
-  const existingRow = existingStmt.get(userId, cleanCarrier, cleanNumber) as ShipmentRow | undefined;
+  const existingRow = existingStmt.get(userId, resolvedCarrier, cleanNumber) as ShipmentRow | undefined;
   if (existingRow) {
     if (cleanLabel && cleanLabel !== existingRow.label) {
       const updateStmt = db.prepare("UPDATE shipments SET label = ?, updated_at = ? WHERE id = ?");
@@ -139,8 +170,6 @@ export async function createShipment(
   const id = crypto.randomUUID();
   const now = new Date().toISOString();
 
-  // Try fetching current tracking info immediately
-  const live = await fetchLiveTracking(cleanCarrier, cleanNumber);
   const status = live?.status || "unknown";
   const statusText = live?.statusText || null;
   const origin = live?.origin || null;
@@ -171,7 +200,7 @@ export async function createShipment(
   insertStmt.run(
     id,
     userId,
-    cleanCarrier,
+    resolvedCarrier,
     cleanNumber,
     cleanLabel,
     status,
@@ -191,7 +220,7 @@ export async function createShipment(
   return {
     id,
     userId,
-    carrier: cleanCarrier,
+    carrier: resolvedCarrier,
     trackingNumber: cleanNumber,
     label: cleanLabel,
     status,
