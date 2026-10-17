@@ -5,6 +5,7 @@ import { formatCarrierDate, formatEta, displayCarrierDate, parseCarrierDate } fr
 import { humanStatus } from "../lib/status";
 import { showToast } from "../lib/toast";
 import { JourneyProgress } from "./JourneyProgress";
+import { ShipmentMap } from "./ShipmentMap";
 import { useAuth } from "../lib/authContext";
 
 interface TrackingCardProps {
@@ -330,6 +331,17 @@ export const TrackingCard: React.FC<TrackingCardProps> = ({
 
       {/* Journey Milestones Bar */}
       <JourneyProgress status={result.status} events={result.events} />
+
+      {/* Interactive Transit Route Map */}
+      <div style={{ margin: "20px 0" }}>
+        <ShipmentMap
+          origin={result.origin}
+          destination={result.destination}
+          events={result.events}
+          status={result.status}
+          height={320}
+        />
+      </div>
 
       {/* Result Filter Divider */}
       <div className="result-filter-divider">
