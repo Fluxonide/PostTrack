@@ -204,7 +204,17 @@ async function getAltchaPayload(): Promise<string> {
 
 function mapStatus(text: string): ShipmentStatus {
   const s = text.trim().toLowerCase();
-  if (s.includes("delivered") || s === "dlvd") return "delivered";
+  if (
+    (s.includes("delivered") || s === "dlvd") &&
+    !s.includes("undelivered") &&
+    !s.includes("not delivered") &&
+    !s.includes("failed") &&
+    !s.includes("return") &&
+    !s.includes("rto") &&
+    !s.includes("attempt")
+  ) {
+    return "delivered";
+  }
   if (s.includes("outfordelivery") || s.includes("out for delivery") || s === "ofd") return "out_for_delivery";
   if (
     s.includes("rtodelivered") ||
@@ -218,12 +228,16 @@ function mapStatus(text: string): ShipmentStatus {
   }
   if (
     s.includes("undelivered") ||
+    s.includes("not delivered") ||
     s.includes("failed") ||
+    s.includes("delay") ||
+    s.includes("delayed") ||
     s.includes("cancel") ||
     s.includes("damaged") ||
     s.includes("exception") ||
     s.includes("lost") ||
-    s.includes("held")
+    s.includes("held") ||
+    s.includes("hold")
   ) {
     return "exception";
   }
