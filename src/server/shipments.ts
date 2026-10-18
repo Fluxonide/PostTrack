@@ -3,13 +3,9 @@ import { db } from "./db";
 import { getCarrier } from "../carriers/registry";
 import { ShipmentStatus, TrackingResult } from "../carriers/types";
 import { detectCarriers, AUTO_CARRIER } from "../carriers/detect";
-<<<<<<< HEAD
-import { accumulateTrackingResult } from "./trackingHistory";
-import { markDirty } from "./dropboxSync";
-=======
 import { accumulateTrackingResult, sanitizeEventStatus } from "./trackingHistory";
+import { markDirty } from "./dropboxSync";
 import { carryForwardStatus, overallStatus } from "../carriers/normalize";
->>>>>>> main
 
 // Ensure cached_result column exists
 try {
