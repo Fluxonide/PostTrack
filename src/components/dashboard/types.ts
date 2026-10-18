@@ -39,7 +39,15 @@ export function formatCarrierName(carrier: string): string {
 }
 
 export function formatStatusText(status: string, statusText: string | null): string {
-  if (statusText) return statusText;
+  if (statusText) {
+    const st = statusText.toLowerCase();
+    const s = status.toLowerCase();
+    if (s !== "exception" && (st.includes("exception") || st.includes("delayed") || st.includes("undelivered"))) {
+      // Do not display stale exception text if status has transitioned back to normal transit or delivered
+    } else {
+      return statusText;
+    }
+  }
   switch (status.toLowerCase()) {
     case "delivered":
       return "Delivered";

@@ -1,5 +1,63 @@
 import { db } from "./db";
-import { TrackingResult, TrackingEvent } from "../carriers/types";
+import { TrackingResult, TrackingEvent, ShipmentStatus } from "../carriers/types";
+import { carryForwardStatus, overallStatus } from "../carriers/normalize";
+import { mapStatus as mapDelhiveryStatus } from "../carriers/delhivery";
+
+/**
+ * Sanitize historical event statuses to ensure real exceptions (like vehicle delayed)
+ * are retained for their timeframe, but normal movement scans (like bag received,
+ * vehicle arrived, facility arrived) are not falsely marked as exceptions.
+ */
+export function sanitizeEventStatus(ev: TrackingEvent, carrier?: string): TrackingEvent {
+  if (carrier && carrier.toLowerCase() === "delhivery") {
+    const recalculated = mapDelhiveryStatus(ev.rawCode, [ev.description, ev.statusText].filter(Boolean).join(" - "));
+    if (recalculated !== "unknown") {
+      return { ...ev, status: recalculated };
+    }
+  }
+
+  // Generic check: if status is 'exception' but description explicitly represents regular transit movement
+  // without any negative/delay keywords, fix status to in_transit
+  if (ev.status === "exception") {
+    const desc = (ev.description || ev.statusText || "").toLowerCase();
+    const hasDelayOrFailure =
+      desc.includes("delayed") ||
+      desc.includes("delay") ||
+      desc.includes("undelivered") ||
+      desc.includes("not delivered") ||
+      desc.includes("attempt") ||
+      desc.includes("fail") ||
+      desc.includes("hold") ||
+      desc.includes("held") ||
+      desc.includes("misroute") ||
+      desc.includes("damage") ||
+      desc.includes("lost") ||
+      desc.includes("reject") ||
+      desc.includes("refuse") ||
+      desc.includes("unable") ||
+      desc.includes("cancel");
+
+    const hasActiveTransit =
+      desc.includes("arrived") ||
+      desc.includes("bag") ||
+      desc.includes("facility") ||
+      desc.includes("hub") ||
+      desc.includes("center") ||
+      desc.includes("centre") ||
+      desc.includes("left for") ||
+      desc.includes("departed") ||
+      desc.includes("dispatched") ||
+      desc.includes("forwarded") ||
+      desc.includes("in transit") ||
+      desc.includes("weight captured");
+
+    if (!hasDelayOrFailure && hasActiveTransit) {
+      return { ...ev, status: "in_transit" };
+    }
+  }
+
+  return ev;
+}
 
 /**
  * Merge two lists of tracking events, preserving all historical checkpoints
@@ -7,14 +65,18 @@ import { TrackingResult, TrackingEvent } from "../carriers/types";
  */
 export function mergeTrackingEvents(
   existing: TrackingEvent[] = [],
-  incoming: TrackingEvent[] = []
+  incoming: TrackingEvent[] = [],
+  carrier?: string
 ): TrackingEvent[] {
-  if (!existing || existing.length === 0) return [...(incoming || [])];
-  if (!incoming || incoming.length === 0) return [...existing];
+  const sanitizedExisting = (existing || []).map((e) => sanitizeEventStatus(e, carrier));
+  const sanitizedIncoming = (incoming || []).map((e) => sanitizeEventStatus(e, carrier));
 
-  const merged: TrackingEvent[] = [...existing];
+  if (!sanitizedExisting || sanitizedExisting.length === 0) return [...(sanitizedIncoming || [])];
+  if (!sanitizedIncoming || sanitizedIncoming.length === 0) return [...sanitizedExisting];
 
-  for (const inc of incoming) {
+  const merged: TrackingEvent[] = [...sanitizedExisting];
+
+  for (const inc of sanitizedIncoming) {
     const incTime = (inc.timestamp || "").trim();
     const incDesc = (inc.description || inc.statusText || "").trim().toLowerCase();
     const incLoc = (inc.location || "").trim().toLowerCase();
@@ -58,7 +120,7 @@ export function mergeTrackingEvents(
   }
 
   // Sort events chronologically (oldest first to latest last)
-  return merged.sort((a, b) => {
+  const sorted = merged.sort((a, b) => {
     const timeA = a.timestamp ? new Date(a.timestamp).getTime() : 0;
     const timeB = b.timestamp ? new Date(b.timestamp).getTime() : 0;
     const validA = !isNaN(timeA) && timeA > 0;
@@ -69,6 +131,8 @@ export function mergeTrackingEvents(
     if (!validA && validB) return -1; // untimestamped event is older than timestamped event
     return 0;
   });
+
+  return carryForwardStatus(sorted);
 }
 
 /**
@@ -77,15 +141,48 @@ export function mergeTrackingEvents(
  */
 export function mergeTrackingResults(
   existing: TrackingResult | null | undefined,
-  incoming: TrackingResult
+  incoming: TrackingResult,
+  carrier?: string
 ): TrackingResult {
-  if (!existing) return incoming;
+  const resolvedCarrier = carrier || incoming.carrier || existing?.carrier;
 
-  const mergedEvents = mergeTrackingEvents(existing.events, incoming.events);
+  if (!existing) {
+    const sanitizedEvents = (incoming.events || []).map((e) => sanitizeEventStatus(e, resolvedCarrier));
+    const processedEvents = carryForwardStatus(sanitizedEvents);
+    let computedStatus: ShipmentStatus;
+    if (incoming.status === "delivered" || incoming.status === "returned") {
+      computedStatus = incoming.status;
+    } else {
+      computedStatus = overallStatus(processedEvents, incoming.status);
+    }
+    return {
+      ...incoming,
+      status: computedStatus,
+      events: processedEvents,
+    };
+  }
+
+  const mergedEvents = mergeTrackingEvents(existing.events, incoming.events, resolvedCarrier);
+
+  let computedStatus: ShipmentStatus;
+  if (incoming.status === "delivered" || incoming.status === "returned") {
+    computedStatus = incoming.status;
+  } else {
+    computedStatus = overallStatus(mergedEvents, incoming.status, existing.status);
+  }
+
+  let computedStatusText = incoming.statusText || existing.statusText;
+  if (computedStatus !== "exception" && computedStatusText) {
+    const stLower = computedStatusText.toLowerCase();
+    if (stLower.includes("exception") || stLower.includes("delayed") || stLower.includes("undelivered")) {
+      computedStatusText = undefined;
+    }
+  }
 
   return {
     ...incoming,
-    status: incoming.status !== "unknown" ? incoming.status : existing.status,
+    status: computedStatus,
+    statusText: computedStatusText,
     origin: incoming.origin || existing.origin,
     destination: incoming.destination || existing.destination,
     estimatedDelivery: incoming.estimatedDelivery || existing.estimatedDelivery,
@@ -103,20 +200,36 @@ export function getHistoryCache(carrier: string, trackingNumber: string): Tracki
       WHERE carrier = ? AND tracking_number = ?
     `);
     const row = stmt.get(carrier.toLowerCase(), trackingNumber.trim()) as { result_json: string } | undefined;
+    let res: TrackingResult | null = null;
     if (row && row.result_json) {
-      return JSON.parse(row.result_json) as TrackingResult;
+      res = JSON.parse(row.result_json) as TrackingResult;
+    } else {
+      // Fallback: check shipments table if not yet in tracking_history_cache
+      const shipStmt = db.prepare(`
+        SELECT cached_result FROM shipments
+        WHERE carrier = ? AND tracking_number = ? AND cached_result IS NOT NULL
+        ORDER BY updated_at DESC LIMIT 1
+      `);
+      const shipRow = shipStmt.get(carrier.toLowerCase(), trackingNumber.trim()) as { cached_result: string } | undefined;
+      if (shipRow && shipRow.cached_result) {
+        res = JSON.parse(shipRow.cached_result) as TrackingResult;
+      }
     }
 
-    // Fallback: check shipments table if not yet in tracking_history_cache
-    const shipStmt = db.prepare(`
-      SELECT cached_result FROM shipments
-      WHERE carrier = ? AND tracking_number = ? AND cached_result IS NOT NULL
-      ORDER BY updated_at DESC LIMIT 1
-    `);
-    const shipRow = shipStmt.get(carrier.toLowerCase(), trackingNumber.trim()) as { cached_result: string } | undefined;
-    if (shipRow && shipRow.cached_result) {
-      return JSON.parse(shipRow.cached_result) as TrackingResult;
+    if (res && res.events && res.events.length > 0) {
+      const sanitized = res.events.map((e) => sanitizeEventStatus(e, carrier));
+      const processed = carryForwardStatus(sanitized);
+      let computedStatus: ShipmentStatus = res.status;
+      if (computedStatus !== "delivered" && computedStatus !== "returned") {
+        computedStatus = overallStatus(processed, res.status);
+      }
+      return {
+        ...res,
+        status: computedStatus,
+        events: processed,
+      };
     }
+    return res;
   } catch (err) {
     console.warn("[TrackingHistory] Cache get error:", err);
   }
@@ -168,8 +281,8 @@ export function accumulateTrackingResult(
   const cached = getHistoryCache(carrier, trackingNumber);
 
   // Merge with existing shipment result first, then with sqlite global history cache
-  let merged = mergeTrackingResults(existingShipmentResult, incoming);
-  merged = mergeTrackingResults(cached, merged);
+  let merged = mergeTrackingResults(existingShipmentResult, incoming, carrier);
+  merged = mergeTrackingResults(cached, merged, carrier);
 
   // Persist updated cumulative history
   saveHistoryCache(carrier, trackingNumber, merged);

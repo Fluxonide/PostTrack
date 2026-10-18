@@ -1,10 +1,15 @@
 import crypto from "node:crypto";
 import { db } from "./db";
 import { getCarrier } from "../carriers/registry";
-import { TrackingResult } from "../carriers/types";
+import { ShipmentStatus, TrackingResult } from "../carriers/types";
 import { detectCarriers, AUTO_CARRIER } from "../carriers/detect";
+<<<<<<< HEAD
 import { accumulateTrackingResult } from "./trackingHistory";
 import { markDirty } from "./dropboxSync";
+=======
+import { accumulateTrackingResult, sanitizeEventStatus } from "./trackingHistory";
+import { carryForwardStatus, overallStatus } from "../carriers/normalize";
+>>>>>>> main
 
 // Ensure cached_result column exists
 try {
@@ -63,14 +68,38 @@ export function toShipment(row: ShipmentRow): Shipment {
     }
   }
 
+  let effectiveStatus = row.status;
+  let effectiveStatusText = row.status_text;
+
+  if (cached && cached.events && cached.events.length > 0) {
+    const sanitizedEvents = cached.events.map((e) => sanitizeEventStatus(e, row.carrier));
+    const processedEvents = carryForwardStatus(sanitizedEvents);
+    cached.events = processedEvents;
+
+    if (effectiveStatus !== "delivered" && effectiveStatus !== "returned") {
+      const computed = overallStatus(processedEvents, cached.status, (effectiveStatus as ShipmentStatus));
+      if (computed !== "unknown") {
+        effectiveStatus = computed;
+        cached.status = computed;
+      }
+    }
+
+    if (effectiveStatus !== "exception" && effectiveStatusText) {
+      const stLower = effectiveStatusText.toLowerCase();
+      if (stLower.includes("exception") || stLower.includes("delayed") || stLower.includes("undelivered")) {
+        effectiveStatusText = null;
+      }
+    }
+  }
+
   return {
     id: row.id,
     userId: row.user_id,
     carrier: row.carrier,
     trackingNumber: row.tracking_number,
     label: row.label,
-    status: row.status,
-    statusText: row.status_text,
+    status: effectiveStatus,
+    statusText: effectiveStatusText,
     origin: row.origin,
     destination: row.destination,
     lastEventText: row.last_event_text,
@@ -170,6 +199,17 @@ export async function createShipment(
       const accumulated = accumulateTrackingResult(resolvedCarrier, cleanNumber, live, existingCached);
       const cachedJson = JSON.stringify(accumulated);
       const newStatus = accumulated.status || existingRow.status;
+      let newStatusText: string | null = accumulated.statusText || null;
+      if (!newStatusText && newStatus === existingRow.status) {
+        newStatusText = existingRow.status_text;
+      }
+      if (newStatus !== "exception" && newStatusText) {
+        const stLower = newStatusText.toLowerCase();
+        if (stLower.includes("exception") || stLower.includes("delayed") || stLower.includes("undelivered")) {
+          newStatusText = null;
+        }
+      }
+
       const topEvent = accumulated.events && accumulated.events.length > 0
         ? accumulated.events[accumulated.events.length - 1]
         : null;
@@ -195,7 +235,7 @@ export async function createShipment(
       updateStmt.run(
         cleanLabel || null,
         newStatus,
-        accumulated.statusText || existingRow.status_text,
+        newStatusText,
         accumulated.origin || existingRow.origin,
         accumulated.destination || existingRow.destination,
         newEventText,
@@ -352,7 +392,16 @@ export async function syncShipment(id: string, userId: string): Promise<Shipment
   );
 
   const status = finalLive.status || shipment.status;
-  const statusText = finalLive.statusText || shipment.statusText;
+  let statusText: string | null = finalLive.statusText || null;
+  if (!statusText && status === shipment.status) {
+    statusText = shipment.statusText;
+  }
+  if (status !== "exception" && statusText) {
+    const stLower = statusText.toLowerCase();
+    if (stLower.includes("exception") || stLower.includes("delayed") || stLower.includes("undelivered")) {
+      statusText = null;
+    }
+  }
   const origin = finalLive.origin || shipment.origin;
   const destination = finalLive.destination || shipment.destination;
 

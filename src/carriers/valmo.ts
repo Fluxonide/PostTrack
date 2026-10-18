@@ -50,14 +50,33 @@ interface ValmoResponse {
 
 function mapStatus(statusStr: string): ShipmentStatus {
   const s = statusStr.trim().toUpperCase();
-  if (s.includes("DELIVERED")) return "delivered";
+  if (
+    s.includes("DELIVERED") &&
+    !s.includes("UNDELIVERED") &&
+    !s.includes("NOT DELIVERED") &&
+    !s.includes("FAILED") &&
+    !s.includes("RETURN") &&
+    !s.includes("RTO") &&
+    !s.includes("ATTEMPT")
+  ) {
+    return "delivered";
+  }
   if (s.includes("OUT_FOR_DELIVERY") || s.includes("OFD")) return "out_for_delivery";
   if (s.includes("RTO") || s.includes("RETURN")) return "returned";
-  if (s.includes("CANCEL") || s.includes("FAILED") || s.includes("UNDELIVERED") || s.includes("EXCEPTION") || s.includes("LOST")) {
+  if (
+    s.includes("CANCEL") ||
+    s.includes("FAILED") ||
+    s.includes("UNDELIVERED") ||
+    s.includes("NOT DELIVERED") ||
+    s.includes("DELAY") ||
+    s.includes("EXCEPTION") ||
+    s.includes("LOST") ||
+    s.includes("HOLD")
+  ) {
     return "exception";
   }
   if (s.includes("PICKED") || s.includes("PICKUP") || s.includes("PICK_UP")) return "picked_up";
-  if (s.includes("HUB") || s.includes("TRANSIT") || s.includes("CONFIRMED") || s.includes("DISPATCH") || s.includes("WAY")) {
+  if (s.includes("HUB") || s.includes("TRANSIT") || s.includes("CONFIRMED") || s.includes("DISPATCH") || s.includes("WAY") || s.includes("ARRIVED")) {
     return "in_transit";
   }
   if (s.includes("PLACED") || s.includes("CREATED") || s.includes("MANIFEST")) return "pending";

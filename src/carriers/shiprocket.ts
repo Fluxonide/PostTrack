@@ -14,12 +14,14 @@ function mapStatus(text: string): ShipmentStatus {
     t.includes("closed") ||
     t.includes("exception") ||
     t.includes("failed") ||
+    t.includes("delay") ||
+    t.includes("delayed") ||
     t.includes("incomplete") ||
     t.includes("incorrect")
   ) {
     return "exception";
   }
-  if (t.includes("delivered")) return "delivered";
+  if (t.includes("delivered") && !t.includes("undelivered") && !t.includes("not delivered")) return "delivered";
   if (t.includes("out for delivery") || t.includes("outscan") || t.includes("dispatched")) return "out_for_delivery";
   if (t.includes("picked") || t.includes("pickup") || t.includes("pick up")) return "picked_up";
   if (

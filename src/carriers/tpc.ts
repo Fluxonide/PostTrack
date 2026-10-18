@@ -15,6 +15,8 @@ function mapStatus(text: string): ShipmentStatus {
     t.includes("not delivered") ||
     t.includes("refused") ||
     t.includes("damage") ||
+    t.includes("delay") ||
+    t.includes("delayed") ||
     t.includes("hold") ||
     t.includes("address") ||
     t.includes("closed") ||
