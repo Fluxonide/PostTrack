@@ -19,6 +19,7 @@ class TelegramService {
   private isPolling = false;
   private lastUpdateId = 0;
   private pollAbortController: AbortController | null = null;
+  private sentNotificationFingerprints = new Map<string, number>();
 
   public async init(): Promise<void> {
     if (!BOT_TOKEN) {
@@ -107,6 +108,18 @@ class TelegramService {
   }
 
   private async handleShipmentUpdate(evt: ShipmentUpdateEvent): Promise<void> {
+    // Deduplicate notifications to prevent duplicate messages for identical milestones
+    const eventDesc = (evt.latestEvent?.description || evt.latestEvent?.statusText || "").trim().toLowerCase();
+    const eventTime = (evt.latestEvent?.timestamp || "").trim();
+    const dedupeKey = `${evt.shipmentId}:${evt.newStatus}:${eventDesc}:${eventTime}`;
+
+    const lastSentTime = this.sentNotificationFingerprints.get(dedupeKey);
+    if (lastSentTime && Date.now() - lastSentTime < 24 * 60 * 60 * 1000) {
+      console.log(`[Telegram] Suppressing duplicate notification for [${evt.carrier}] ${evt.trackingNumber}: "${eventDesc}"`);
+      return;
+    }
+    this.sentNotificationFingerprints.set(dedupeKey, Date.now());
+
     // Find the user's telegram chat_id
     const stmt = db.prepare("SELECT telegram_chat_id, username FROM users WHERE id = ?");
     const user = stmt.get(evt.userId) as { telegram_chat_id: string | null; username: string } | undefined;

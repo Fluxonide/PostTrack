@@ -142,10 +142,15 @@ class AutoCheckWorker extends EventEmitter {
       const newEventTime = topEvent ? topEvent.timestamp || null : null;
 
       // Check if there is an update compared to previous state
+      const normOldText = (row.last_event_text || "").trim().toLowerCase();
+      const normNewText = (newEventText || "").trim().toLowerCase();
+      const normOldTime = (row.last_event_time || "").trim();
+      const normNewTime = (newEventTime || "").trim();
+
       const hasStatusChange = newStatus !== row.status && newStatus !== "unknown";
       const hasEventChange =
-        newEventText &&
-        (newEventText !== row.last_event_text || (newEventTime && newEventTime !== row.last_event_time));
+        Boolean(normNewText) &&
+        (normNewText !== normOldText || (Boolean(normNewTime) && normNewTime !== normOldTime));
 
       const isFinished = newStatus === "delivered" || newStatus === "returned";
 
