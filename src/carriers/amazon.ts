@@ -49,11 +49,11 @@ function mapEventCode(code: string | undefined): ShipmentStatus {
   const t = (code ?? "").toLowerCase();
   if (!t) return "unknown";
   if (t.includes("return")) return "returned";
-  if (t.includes("undeliver") || t.includes("reject") || t.includes("attempt") || t.includes("hold")) {
+  if (t.includes("undeliver") || t.includes("reject") || t.includes("attempt") || t.includes("hold") || t.includes("delay")) {
     return "exception";
   }
   if (t.includes("outfordelivery") || t === "ofd" || t.includes("out_for_delivery")) return "out_for_delivery";
-  if (t.includes("deliver")) return "delivered";
+  if (t.includes("deliver") && !t.includes("undeliver")) return "delivered";
   if (t.includes("pickup") || t === "pickupdone") return "picked_up";
   if (
     t.includes("received") ||
