@@ -6,7 +6,17 @@ const UA = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Geck
 
 function mapStatus(text: string): ShipmentStatus {
   const t = text.toLowerCase();
-  if (t.includes("delivered") && !t.includes("attempted") && !t.includes("undelivered")) return "delivered";
+  if (
+    t.includes("delivered") &&
+    !t.includes("attempt") &&
+    !t.includes("undelivered") &&
+    !t.includes("not delivered") &&
+    !t.includes("failed") &&
+    !t.includes("return") &&
+    !t.includes("rto")
+  ) {
+    return "delivered";
+  }
   if (t.includes("out for delivery")) return "out_for_delivery";
   if (t.includes("returned") || t.includes("rto")) return "returned";
   if (t.includes("picked up") || t.includes("pickup")) return "picked_up";
@@ -14,11 +24,15 @@ function mapStatus(text: string): ShipmentStatus {
     t.includes("address incomplete") ||
     t.includes("premises closed") ||
     t.includes("undelivered") ||
+    t.includes("not delivered") ||
     t.includes("attempt") ||
     t.includes("not available") ||
     t.includes("refused") ||
     t.includes("damaged") ||
     t.includes("held") ||
+    t.includes("hold") ||
+    t.includes("delay") ||
+    t.includes("delayed") ||
     t.includes("misroute") ||
     t.includes("unclaimed") ||
     t.includes("incorrect") ||
@@ -32,7 +46,6 @@ function mapStatus(text: string): ShipmentStatus {
     t.includes("arrived") ||
     t.includes("connected") ||
     t.includes("shipped") ||
-    t.includes("delay") ||
     t.includes("departed") ||
     t.includes("dispatched") ||
     t.includes("bagged") ||
