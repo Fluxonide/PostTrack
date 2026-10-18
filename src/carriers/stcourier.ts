@@ -7,10 +7,20 @@ const UA = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Geck
 
 function mapStatus(text: string): ShipmentStatus {
   const t = text.toLowerCase();
-  if (t.includes("delivered")) return "delivered";
+  if (t.includes("delivered") && !t.includes("undelivered") && !t.includes("not delivered")) return "delivered";
   if (t.includes("out for delivery")) return "out_for_delivery";
   if (t.includes("returned") || t.includes("rto")) return "returned";
-  if (t.includes("undelivered") || t.includes("hold") || t.includes("attempt") || t.includes("missed")) return "exception";
+  if (
+    t.includes("undelivered") ||
+    t.includes("not delivered") ||
+    t.includes("hold") ||
+    t.includes("attempt") ||
+    t.includes("missed") ||
+    t.includes("delay") ||
+    t.includes("delayed")
+  ) {
+    return "exception";
+  }
   if (t.includes("picked up") || t.includes("booked")) return "picked_up";
   if (t.includes("in transit") || t.includes("forwarded") || t.includes("dispatched") || t.includes("received")) return "in_transit";
   return "unknown";
