@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import "dotenv/config";
 import { getDbPath, checkpointDb, reopenDb, getDbStats } from "./db";
 
 const DROPBOX_REFRESH_TOKEN = process.env.DROPBOX_REFRESH_TOKEN ?? "";
@@ -20,7 +21,13 @@ let lastBackupAt = 0;
 let lastDbHash: string | null = null;
 
 export function isConfigured(): boolean {
-  return Boolean(DROPBOX_REFRESH_TOKEN && DROPBOX_APP_KEY && DROPBOX_APP_SECRET);
+  // Sync runs on Render, in production, or when explicitly enabled via ENABLE_DROPBOX_SYNC=true.
+  // This prevents local dev on a laptop from accidentally overwriting the production database.
+  const isTargetEnv =
+    process.env.RENDER === "true" ||
+    process.env.NODE_ENV === "production" ||
+    process.env.ENABLE_DROPBOX_SYNC === "true";
+  return isTargetEnv && Boolean(DROPBOX_REFRESH_TOKEN && DROPBOX_APP_KEY && DROPBOX_APP_SECRET);
 }
 
 function getDbFingerprint(): string | null {
@@ -138,6 +145,13 @@ export async function runBackup(force = false): Promise<boolean> {
     const dbPath = getDbPath();
     if (!fs.existsSync(dbPath)) {
       console.warn("[Dropbox] Database file not found to backup");
+      return false;
+    }
+
+    // Safety guard: never push an empty database over a populated remote database unless forced
+    const stats = getDbStats();
+    if (stats.userCount === 0 && stats.shipmentCount === 0 && !force) {
+      console.warn("[Dropbox] Aborting push — database has 0 users & shipments; avoiding overwrite of remote backup");
       return false;
     }
 

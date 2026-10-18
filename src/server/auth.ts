@@ -1,7 +1,7 @@
 import crypto from "node:crypto";
 import http from "node:http";
 import { db } from "./db";
-import { markDirty } from "./dropboxSync";
+import { markDirty, runBackup } from "./dropboxSync";
 
 export interface UserRow {
   id: string;
@@ -84,6 +84,7 @@ export function createUser(username: string, email: string, password: string): P
   );
   insertStmt.run(id, cleanUsername, cleanEmail, passwordHash, now);
   markDirty();
+  runBackup(true).catch((err) => console.error("[Dropbox] Immediate user backup error:", err));
 
   return {
     id,
