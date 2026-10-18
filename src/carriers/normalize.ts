@@ -7,6 +7,12 @@ export function carryForwardStatus(events: TrackingEvent[]): TrackingEvent[] {
       known = ev.status;
       return ev;
     }
+    // If the previous status was 'exception', a subsequent scan event indicates
+    // the shipment has resumed active movement in the logistics pipeline.
+    if (known === "exception") {
+      known = "in_transit";
+      return { ...ev, status: "in_transit" };
+    }
     return known ? { ...ev, status: known } : ev;
   });
 }
