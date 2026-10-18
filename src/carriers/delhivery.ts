@@ -6,18 +6,135 @@ const PUBLIC_URL = "https://dlv-api.delhivery.com/v3/unified-tracking";
 const PUBLIC_ORIGIN = "https://www.delhivery.com";
 const UA = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
 
-function mapStatus(type?: string, text?: string): ShipmentStatus {
+export function mapStatus(type?: string, text?: string): ShipmentStatus {
   const t = (type || "").toUpperCase();
   const s = (text || "").toLowerCase();
 
-  if (t === "DL" || s.includes("delivered") || s.includes("successful delivery")) return "delivered";
-  if (t === "RT" || t === "RTO" || s.includes("returned") || s.includes("return to origin") || s.includes("rto")) return "returned";
-  if (t === "UD" || s.includes("undelivered") || s.includes("failed delivery") || s.includes("attempted")) return "exception";
-  if (t === "OO" || s.includes("out for delivery") || s.includes("dispatched for delivery")) return "out_for_delivery";
-  if (t === "IT" || s.includes("in transit") || s.includes("reached") || s.includes("connected") || s.includes("manifest")) return "in_transit";
-  if (t === "PP" || t === "PU" || s.includes("picked up") || s.includes("pickup done")) return "picked_up";
-  if (t === "UD" || s.includes("delayed") || s.includes("hold") || s.includes("address")) return "exception";
-  if (s.includes("order placed") || s.includes("created")) return "pending";
+  // 1. Returned / RTO
+  if (
+    t === "RT" ||
+    t === "RTO" ||
+    s.includes("returned") ||
+    s.includes("return to origin") ||
+    s.includes("rto") ||
+    s.includes("return to sender")
+  ) {
+    return "returned";
+  }
+
+  // 2. Delivered (ensuring negative phrases like "not delivered" or "undelivered" don't match)
+  if (
+    t === "DL" ||
+    s.includes("successful delivery") ||
+    (s.includes("delivered") &&
+      !s.includes("not delivered") &&
+      !s.includes("undelivered") &&
+      !s.includes("failed delivery") &&
+      !s.includes("unsuccessful") &&
+      !s.includes("return") &&
+      !s.includes("rto") &&
+      !s.includes("attempt"))
+  ) {
+    return "delivered";
+  }
+
+  // 3. Out for delivery
+  if (
+    t === "OO" ||
+    s.includes("out for delivery") ||
+    s.includes("dispatched for delivery") ||
+    s.includes("out for del")
+  ) {
+    return "out_for_delivery";
+  }
+
+  // 4. Picked up
+  if (
+    t === "PP" ||
+    t === "PU" ||
+    s.includes("picked up") ||
+    s.includes("pickup done") ||
+    s.includes("pickup completed")
+  ) {
+    return "picked_up";
+  }
+
+  // 5. Clear exceptions / delays / failures
+  if (
+    s.includes("delayed") ||
+    s.includes("delay") ||
+    s.includes("undelivered") ||
+    s.includes("failed delivery") ||
+    s.includes("delivery failed") ||
+    s.includes("not delivered") ||
+    s.includes("unable to reach") ||
+    s.includes("attempted") ||
+    s.includes("customer not available") ||
+    s.includes("consignee not available") ||
+    s.includes("unreachable") ||
+    s.includes("refused") ||
+    s.includes("rejected") ||
+    s.includes("hold") ||
+    s.includes("held") ||
+    s.includes("misrouted") ||
+    s.includes("misroute") ||
+    s.includes("damaged") ||
+    s.includes("damage") ||
+    s.includes("lost") ||
+    s.includes("incorrect") ||
+    s.includes("address incomplete") ||
+    s.includes("cancelled") ||
+    s.includes("canceled") ||
+    s.includes("door step return")
+  ) {
+    return "exception";
+  }
+
+  // 6. Active transit movement scans
+  if (
+    t === "IT" ||
+    t === "ST" ||
+    s.includes("in transit") ||
+    s.includes("in_transit") ||
+    s.includes("intransit") ||
+    s.includes("reached") ||
+    s.includes("arrived") ||
+    s.includes("connected") ||
+    s.includes("manifest") ||
+    s.includes("bag") ||
+    s.includes("facility") ||
+    s.includes("hub") ||
+    s.includes("center") ||
+    s.includes("centre") ||
+    s.includes("vehicle") ||
+    s.includes("weight") ||
+    s.includes("captured") ||
+    s.includes("left for") ||
+    s.includes("departed") ||
+    s.includes("dispatched") ||
+    s.includes("sorted") ||
+    s.includes("forwarded") ||
+    s.includes("received") ||
+    s.includes("scanned") ||
+    s.includes("inscan")
+  ) {
+    return "in_transit";
+  }
+
+  // 7. Order creation / pending
+  if (
+    s.includes("order placed") ||
+    s.includes("created") ||
+    s.includes("manifested") ||
+    s.includes("label created") ||
+    s.includes("data received")
+  ) {
+    return "pending";
+  }
+
+  // 8. Fallback on scan type code if no movement keywords matched
+  if (t === "UD") return "exception";
+  if (t === "IT" || t === "ST") return "in_transit";
 
   return "unknown";
 }
@@ -42,6 +159,7 @@ interface PublicState {
 interface PublicShipment {
   awb?: string;
   status?: { status?: string; statusDateTime?: string; statusType?: string; instructions?: string };
+  hqStatus?: string;
   trackingStates?: PublicState[];
   destination?: string;
   deliveryDate?: string;
@@ -55,9 +173,11 @@ function parsePublicEvents(d: PublicShipment): TrackingEvent[] {
     for (const sc of state.scans ?? []) {
       const description = sc.scanNslRemark || sc.scan;
       if (!description) continue;
+      const combinedText = [sc.scan, sc.scanNslRemark].filter(Boolean).join(" - ");
+      const timestamp = sc.scanDateTime || sc.scanDate || state.scanDateTime || state.date || d.status?.statusDateTime || "";
       events.push({
-        timestamp: sc.scanDateTime || sc.scanDate || state.scanDateTime || state.date || "",
-        status: mapStatus(sc.scanType, sc.scan),
+        timestamp,
+        status: mapStatus(sc.scanType, combinedText),
         location: sc.scannedLocation || sc.cityLocation || undefined,
         description,
         rawCode: sc.scanType || undefined,
@@ -68,6 +188,7 @@ function parsePublicEvents(d: PublicShipment): TrackingEvent[] {
   const st = d.status;
   const description = st?.instructions || st?.status;
   if (st?.statusDateTime && description) {
+    const combinedStatusText = [d.hqStatus, st.status, st.instructions].filter(Boolean).join(" - ");
     const last = events[events.length - 1];
     const latestKnownLoc = [...events].reverse().find((e) => e.location)?.location;
 
@@ -76,10 +197,11 @@ function parsePublicEvents(d: PublicShipment): TrackingEvent[] {
       if (!last.location && latestKnownLoc) {
         last.location = latestKnownLoc;
       }
+      last.status = mapStatus(st.statusType, combinedStatusText);
     } else {
       events.push({
         timestamp: st.statusDateTime,
-        status: mapStatus(st.statusType, st.status),
+        status: mapStatus(st.statusType, combinedStatusText),
         location: latestKnownLoc,
         description,
         rawCode: st.statusType || undefined,
@@ -121,11 +243,14 @@ async function trackViaPublic(cleaned: string): Promise<TrackingResult> {
   if (!d) throw new CarrierError("Tracking number not found", "not_found", 404);
 
   const events = parsePublicEvents(d);
+  const topStatusText = [d.hqStatus, d.status?.status, d.status?.instructions].filter(Boolean).join(" - ");
+  const fallbackStatus = mapStatus(d.status?.statusType, topStatusText);
+
   return {
     carrier: "delhivery",
     carrierName: "Delhivery",
     trackingNumber: cleaned,
-    status: overallStatus(events, mapStatus(d.status?.statusType, d.status?.status)),
+    status: overallStatus(events, fallbackStatus),
     estimatedDelivery: d.deliveryDate || d.promiseDeliveryDate || undefined,
     destination: d.destination || undefined,
     events,
