@@ -167,6 +167,17 @@ class AutoCheckWorker extends EventEmitter {
       const autoCheckVal = isFinished ? 0 : 1;
       const cachedJson = JSON.stringify(accumulated);
 
+      let newStatusText: string | null = accumulated.statusText || null;
+      if (!newStatusText && newStatus === row.status) {
+        newStatusText = row.status_text;
+      }
+      if (newStatus !== "exception" && newStatusText) {
+        const stLower = newStatusText.toLowerCase();
+        if (stLower.includes("exception") || stLower.includes("delayed") || stLower.includes("undelivered")) {
+          newStatusText = null;
+        }
+      }
+
       const updateStmt = db.prepare(`
         UPDATE shipments
         SET status = ?, status_text = ?, origin = ?, destination = ?,
@@ -177,7 +188,7 @@ class AutoCheckWorker extends EventEmitter {
 
       updateStmt.run(
         newStatus,
-        accumulated.statusText || row.status_text,
+        newStatusText,
         accumulated.origin || row.origin,
         accumulated.destination || row.destination,
         newEventText || row.last_event_text,
