@@ -59,11 +59,15 @@ export function mergeTrackingEvents(
 
   // Sort events chronologically (oldest first to latest last)
   return merged.sort((a, b) => {
-    if (!a.timestamp || !b.timestamp) return 0;
-    const tA = new Date(a.timestamp).getTime();
-    const tB = new Date(b.timestamp).getTime();
-    if (isNaN(tA) || isNaN(tB)) return 0;
-    return tA - tB;
+    const timeA = a.timestamp ? new Date(a.timestamp).getTime() : 0;
+    const timeB = b.timestamp ? new Date(b.timestamp).getTime() : 0;
+    const validA = !isNaN(timeA) && timeA > 0;
+    const validB = !isNaN(timeB) && timeB > 0;
+
+    if (validA && validB) return timeA - timeB;
+    if (validA && !validB) return 1;  // timestamped event is newer than untimestamped event
+    if (!validA && validB) return -1; // untimestamped event is older than timestamped event
+    return 0;
   });
 }
 
