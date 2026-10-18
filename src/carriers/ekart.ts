@@ -15,6 +15,8 @@ function mapStatus(text: string): ShipmentStatus {
     t.includes("attempt") ||
     t.includes("refused") ||
     t.includes("rejected") ||
+    t.includes("delay") ||
+    t.includes("delayed") ||
     t.includes("cancel") ||
     t.includes("lost") ||
     t.includes("damage") ||
@@ -23,7 +25,7 @@ function mapStatus(text: string): ShipmentStatus {
     return "exception";
   }
   if (t.includes("out for delivery")) return "out_for_delivery";
-  if (t.includes("delivered")) return "delivered";
+  if (t.includes("delivered") && !t.includes("undelivered") && !t.includes("not delivered")) return "delivered";
   if (t.includes("pickup") || t.includes("picked")) return "picked_up";
   if (
     t.includes("received") ||
