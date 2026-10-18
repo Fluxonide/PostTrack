@@ -69,12 +69,18 @@ function parsePublicEvents(d: PublicShipment): TrackingEvent[] {
   const description = st?.instructions || st?.status;
   if (st?.statusDateTime && description) {
     const last = events[events.length - 1];
+    const latestKnownLoc = [...events].reverse().find((e) => e.location)?.location;
+
     if (last && last.description === description) {
       last.timestamp = st.statusDateTime;
+      if (!last.location && latestKnownLoc) {
+        last.location = latestKnownLoc;
+      }
     } else {
       events.push({
         timestamp: st.statusDateTime,
         status: mapStatus(st.statusType, st.status),
+        location: latestKnownLoc,
         description,
         rawCode: st.statusType || undefined,
       });
