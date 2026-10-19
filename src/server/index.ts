@@ -499,10 +499,8 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
-server.listen(PORT, async () => {
-  console.log(`[PostTrack Server] Running at http://localhost:${PORT}`);
-
-  // Restore SQLite database from Dropbox if configured (essential for Render ephemeral disks)
+async function startServer() {
+  // Restore SQLite database from Dropbox before serving traffic (essential for Render ephemeral disks)
   if (dropboxSync.isConfigured()) {
     try {
       await dropboxSync.autoRestore();
@@ -515,6 +513,11 @@ server.listen(PORT, async () => {
     console.log("[Dropbox] Sync disabled (DROPBOX_* env vars not set)");
   }
 
-  autoCheckWorker.start(30000);
-  telegramService.init().catch((err) => console.error("[Telegram] Init error:", err));
-});
+  server.listen(PORT, () => {
+    console.log(`[PostTrack Server] Running at http://localhost:${PORT}`);
+    autoCheckWorker.start(30000);
+    telegramService.init().catch((err) => console.error("[Telegram] Init error:", err));
+  });
+}
+
+startServer();
