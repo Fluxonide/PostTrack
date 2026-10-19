@@ -7,6 +7,7 @@ import { DashboardStats } from "./dashboard/DashboardStats";
 import { ShipmentCard } from "./dashboard/ShipmentCard";
 import { AddShipmentModal } from "./dashboard/AddShipmentModal";
 import { ShipmentTimelineModal } from "./dashboard/ShipmentTimelineModal";
+import { parseCarrierDate } from "../lib/dates";
 
 interface DashboardViewProps {
   onOpenTelegramModal: () => void;
@@ -201,13 +202,44 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     setTimeout(() => setCopiedId(null), 1500);
   };
 
+  // Sorted shipments: active first, then delivered/returned at bottom, ordered by milestone date
+  const sortedShipments = React.useMemo(() => {
+    return [...shipments].sort((a, b) => {
+      const isFinishedA = a.status === "delivered" || a.status === "returned";
+      const isFinishedB = b.status === "delivered" || b.status === "returned";
+
+      // 1. Active shipments before finished shipments
+      if (!isFinishedA && isFinishedB) return -1;
+      if (isFinishedA && !isFinishedB) return 1;
+
+      // 2. High urgency / movement scans at top of active
+      if (!isFinishedA && !isFinishedB) {
+        const priority = (s: string) => {
+          if (s === "out_for_delivery") return 1;
+          if (s === "exception") return 2;
+          if (s === "in_transit") return 3;
+          return 4;
+        };
+        const pA = priority(a.status);
+        const pB = priority(b.status);
+        if (pA !== pB) return pA - pB;
+      }
+
+      // 3. Chronological by latest carrier event / activity time (newest first)
+      const timeA = parseCarrierDate(a.lastEventTime)?.getTime() ?? (a.updatedAt ? new Date(a.updatedAt).getTime() : 0);
+      const timeB = parseCarrierDate(b.lastEventTime)?.getTime() ?? (b.updatedAt ? new Date(b.updatedAt).getTime() : 0);
+
+      return timeB - timeA;
+    });
+  }, [shipments]);
+
   // Stats calculation
   const totalCount = shipments.length;
   const deliveredCount = shipments.filter((s) => s.status === "delivered").length;
   const activeCount = totalCount - deliveredCount;
 
   // Filtered shipments
-  const filteredShipments = shipments.filter((s) => {
+  const filteredShipments = sortedShipments.filter((s) => {
     if (filter === "active") return s.status !== "delivered";
     if (filter === "delivered") return s.status === "delivered";
     return true;

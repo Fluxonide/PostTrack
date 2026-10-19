@@ -15,6 +15,7 @@ import {
   getStatusBadgeStyle,
   getStatusDotColor,
 } from "./types";
+import { formatEventTime } from "../../lib/dates";
 
 interface ShipmentCardProps {
   shipment: ShipmentItem;
@@ -240,7 +241,7 @@ export const ShipmentCard: React.FC<ShipmentCardProps> = ({
             <span style={{ flex: 1 }}>{shipment.lastEventText}</span>
             {shipment.lastEventTime && (
               <span style={{ fontSize: 11, color: "var(--text-3)", fontFamily: "var(--mono)", whiteSpace: "nowrap" }}>
-                {shipment.lastEventTime}
+                {formatEventTime(shipment.lastEventTime)}
               </span>
             )}
           </div>

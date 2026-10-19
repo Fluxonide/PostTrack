@@ -1,7 +1,7 @@
 import React from "react";
 import type { StoredTrackingItem } from "../lib/storage";
 import { humanStatus } from "../lib/status";
-import { relativeTime } from "../lib/dates";
+import { relativeTime, parseCarrierDate } from "../lib/dates";
 
 interface RecentHistoryProps {
   isOpen: boolean;
@@ -20,6 +20,22 @@ export const RecentHistory: React.FC<RecentHistoryProps> = ({
   onRemove,
   onClearAll,
 }) => {
+  const sortedItems = React.useMemo(() => {
+    return [...items].sort((a, b) => {
+      const isFinishedA = a.status === "delivered" || a.status === "returned";
+      const isFinishedB = b.status === "delivered" || b.status === "returned";
+
+      // Active shipments before completed/delivered shipments
+      if (!isFinishedA && isFinishedB) return -1;
+      if (isFinishedA && !isFinishedB) return 1;
+
+      const timeA = parseCarrierDate(a.lastEventTime)?.getTime() ?? (a.updatedAt ? new Date(a.updatedAt).getTime() : 0);
+      const timeB = parseCarrierDate(b.lastEventTime)?.getTime() ?? (b.updatedAt ? new Date(b.updatedAt).getTime() : 0);
+
+      return timeB - timeA;
+    });
+  }, [items]);
+
   if (!isOpen) return null;
 
   return (
@@ -70,7 +86,7 @@ export const RecentHistory: React.FC<RecentHistoryProps> = ({
             </div>
           ) : (
             <div className="results-list">
-              {items.map((item, idx) => {
+              {sortedItems.map((item, idx) => {
                 const dateObj = new Date(item.updatedAt);
 
                 return (

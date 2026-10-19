@@ -1,5 +1,6 @@
 import { Carrier, CarrierError, ShipmentStatus, TrackingEvent, TrackingResult } from "./types";
 import { carryForwardStatus, overallStatus, stripTags } from "./normalize";
+import { normalizeCarrierDate } from "../lib/dates";
 
 const CHECK_URL = "https://stcourier.com/track/doCheck";
 const RESULT_URL = "https://stcourier.com/track/shipment";
@@ -37,9 +38,9 @@ function parseEvents(html: string): TrackingEvent[] {
     const cells = Array.from(row.matchAll(/<td[^>]*>([\s\S]*?)<\/td>/gi)).map((m) => stripTags(m[1]));
     if (cells.length < 3) continue;
     const [dateStr, location, description] = cells;
-    if (!description || description.toLowerCase().includes("status")) continue;
+    const rawTime = dateStr.trim();
     events.push({
-      timestamp: dateStr.trim(),
+      timestamp: normalizeCarrierDate(rawTime) || rawTime,
       status: mapStatus(description),
       location: location || undefined,
       description,

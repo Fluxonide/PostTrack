@@ -1,5 +1,6 @@
 import { Carrier, CarrierError, ShipmentStatus, TrackingEvent, TrackingResult } from "./types";
 import { carryForwardStatus, overallStatus } from "./normalize";
+import { normalizeCarrierDate } from "../lib/dates";
 
 const TRACK_URL = "https://track.amazon.in/api/tracker";
 const UA = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
@@ -108,9 +109,9 @@ function parseEvents(history: AmazonEvent[] | undefined): TrackingEvent[] {
   for (const ev of history) {
     const code = ev.eventCode ?? "";
     const description = titleFromCode(code);
-    if (!description) continue;
+    const rawTime = ev.eventTime ?? "";
     events.push({
-      timestamp: ev.eventTime ?? "",
+      timestamp: normalizeCarrierDate(rawTime) || rawTime,
       status: mapEventCode(code),
       location: formatLocation(ev.location),
       description,
@@ -188,7 +189,7 @@ export const amazon: Carrier = {
       carrierName: "Amazon Shipping",
       trackingNumber: cleaned,
       status,
-      estimatedDelivery: meta?.expectedDeliveryDate?.date || meta?.promisedDeliveryDate?.date || undefined,
+      estimatedDelivery: normalizeCarrierDate(meta?.expectedDeliveryDate?.date || meta?.promisedDeliveryDate?.date) || meta?.expectedDeliveryDate?.date || meta?.promisedDeliveryDate?.date || undefined,
       origin,
       events,
       fetchedAt: new Date().toISOString(),

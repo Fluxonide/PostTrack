@@ -1,5 +1,6 @@
 import { Carrier, CarrierError, ShipmentStatus, TrackingEvent, TrackingResult } from "./types";
 import { carryForwardStatus, overallStatus, stripTags } from "./normalize";
+import { normalizeCarrierDate } from "../lib/dates";
 
 const TRACK_URL = "https://shiprocket.co/tracking";
 const UA = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
@@ -57,7 +58,8 @@ function parseScans(html: string): TrackingEvent[] {
 
     const date = firstGroup(li, /<span[^>]*class=['"]date['"][^>]*>([\s\S]*?)<\/span>/i);
     const time = firstGroup(li, /<span[^>]*class=['"]time['"][^>]*>([\s\S]*?)<\/span>/i);
-    const timestamp = [date, time].filter(Boolean).join(" ");
+    const rawTimestamp = [date, time].filter(Boolean).join(" ");
+    const timestamp = normalizeCarrierDate(rawTimestamp) || rawTimestamp;
 
     events.push({
       timestamp,

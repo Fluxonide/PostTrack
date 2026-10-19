@@ -1,5 +1,6 @@
 import { Carrier, CarrierError, ShipmentStatus, TrackingEvent, TrackingResult } from "./types";
 import { carryForwardStatus, overallStatus } from "./normalize";
+import { normalizeCarrierDate } from "../lib/dates";
 
 const VALMO_API_BASE = "https://www.valmo.in/api/valmo-web/track-order";
 const UA = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36";
@@ -190,7 +191,8 @@ export const valmo: Carrier = {
     // Parse estimated delivery from main_status display_name (e.g. "Delivery by Tue, 20 Oct")
     let estimatedDelivery: string | undefined;
     if (data.main_status?.display_name && /Delivery by/i.test(data.main_status.display_name)) {
-      estimatedDelivery = data.main_status.display_name.replace(/Delivery by\s*/i, "").trim();
+      const rawEdd = data.main_status.display_name.replace(/Delivery by\s*/i, "").trim();
+      estimatedDelivery = normalizeCarrierDate(rawEdd) || rawEdd;
     }
 
     return {
