@@ -327,11 +327,6 @@ export function startBackupScheduler(): void {
   console.log("[Dropbox] Scheduler active — periodic sync every 5 minutes");
   lastDbHash = getDbFingerprint();
 
-  // Run initial push after 30 seconds
-  setTimeout(() => {
-    runBackup();
-  }, 30_000);
-
   if (backupTimer) clearInterval(backupTimer);
   backupTimer = setInterval(async () => {
     if (dirtyTimer) return;
@@ -354,12 +349,14 @@ export function stopBackupScheduler(): void {
 
 export function setupShutdownHooks(): void {
   const shutdown = async (signal: string) => {
-    console.log(`[Dropbox] Received ${signal} — performing final sync before exit...`);
+    console.log(`[Dropbox] Received ${signal} — checking sync before exit...`);
     stopBackupScheduler();
     try {
-      await runBackup(true);
+      if (hasDbChanged()) {
+        await runBackup(false);
+      }
     } catch (err) {
-      console.error("[Dropbox] Final shutdown backup failed:", err);
+      console.error("[Dropbox] Shutdown backup failed:", err);
     }
     process.exit(0);
   };
