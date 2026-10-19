@@ -60,7 +60,7 @@ export const ShipmentTimelineModal: React.FC<ShipmentTimelineModalProps> = ({
           <div>
             <h4 style={{ fontSize: 14, color: "var(--text)", marginBottom: 12 }}>Activity History</h4>
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              {shipment.cachedResult.events?.map((ev, idx) => (
+              {[...(shipment.cachedResult.events || [])].reverse().map((ev, idx) => (
                 <div
                   key={idx}
                   style={{
@@ -71,9 +71,9 @@ export const ShipmentTimelineModal: React.FC<ShipmentTimelineModalProps> = ({
                     fontSize: 13,
                   }}
                 >
-                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-                    <span style={{ fontWeight: 600, color: "var(--text)" }}>{ev.statusText || ev.status}</span>
-                    <span style={{ fontSize: 11, color: "var(--text-3)", fontFamily: "var(--mono)" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 4, gap: 8 }}>
+                    <span style={{ fontWeight: 600, color: "var(--text)", flex: 1 }}>{ev.description || ev.statusText || ev.status}</span>
+                    <span style={{ fontSize: 11, color: "var(--text-3)", fontFamily: "var(--mono)", whiteSpace: "nowrap" }}>
                       {displayCarrierDate(ev.timestamp).text}
                     </span>
                   </div>
