@@ -2,6 +2,7 @@ import { db } from "./db";
 import { TrackingResult, TrackingEvent, ShipmentStatus } from "../carriers/types";
 import { carryForwardStatus, overallStatus } from "../carriers/normalize";
 import { mapStatus as mapDelhiveryStatus } from "../carriers/delhivery";
+import { parseCarrierDate, normalizeCarrierDate } from "../lib/dates";
 
 /**
  * Sanitize historical event statuses to ensure real exceptions (like vehicle delayed)
@@ -77,18 +78,18 @@ export function mergeTrackingEvents(
   const merged: TrackingEvent[] = [...sanitizedExisting];
 
   for (const inc of sanitizedIncoming) {
-    const incTime = (inc.timestamp || "").trim();
+    const incNormTime = normalizeCarrierDate(inc.timestamp) || (inc.timestamp || "").trim();
     const incDesc = (inc.description || inc.statusText || "").trim().toLowerCase();
     const incLoc = (inc.location || "").trim().toLowerCase();
 
     // Look for duplicate/matching event in existing history
     const matchIndex = merged.findIndex((ex) => {
-      const exTime = (ex.timestamp || "").trim();
+      const exNormTime = normalizeCarrierDate(ex.timestamp) || (ex.timestamp || "").trim();
       const exDesc = (ex.description || ex.statusText || "").trim().toLowerCase();
       const exLoc = (ex.location || "").trim().toLowerCase();
 
       // If timestamps match, compare descriptions and locations
-      if (incTime && exTime && incTime === exTime) {
+      if (incNormTime && exNormTime && incNormTime === exNormTime) {
         return incDesc === exDesc || (incLoc && incLoc === exLoc);
       }
 
@@ -106,7 +107,7 @@ export function mergeTrackingEvents(
       merged[matchIndex] = {
         ...ex,
         ...inc,
-        timestamp: inc.timestamp || ex.timestamp,
+        timestamp: normalizeCarrierDate(inc.timestamp || ex.timestamp) || inc.timestamp || ex.timestamp,
         location: inc.location || ex.location,
         status: inc.status !== "unknown" ? inc.status : ex.status,
         statusText: inc.statusText || ex.statusText,
@@ -115,16 +116,19 @@ export function mergeTrackingEvents(
       };
     } else {
       // New event found; append it so history is never lost
-      merged.push(inc);
+      merged.push({
+        ...inc,
+        timestamp: normalizeCarrierDate(inc.timestamp) || inc.timestamp,
+      });
     }
   }
 
   // Sort events chronologically (oldest first to latest last)
   const sorted = merged.sort((a, b) => {
-    const timeA = a.timestamp ? new Date(a.timestamp).getTime() : 0;
-    const timeB = b.timestamp ? new Date(b.timestamp).getTime() : 0;
-    const validA = !isNaN(timeA) && timeA > 0;
-    const validB = !isNaN(timeB) && timeB > 0;
+    const timeA = parseCarrierDate(a.timestamp)?.getTime() ?? 0;
+    const timeB = parseCarrierDate(b.timestamp)?.getTime() ?? 0;
+    const validA = timeA > 0;
+    const validB = timeB > 0;
 
     if (validA && validB) return timeA - timeB;
     if (validA && !validB) return 1;  // timestamped event is newer than untimestamped event
@@ -132,7 +136,12 @@ export function mergeTrackingEvents(
     return 0;
   });
 
-  return carryForwardStatus(sorted);
+  const normalizedList = sorted.map((e) => {
+    const iso = normalizeCarrierDate(e.timestamp);
+    return iso ? { ...e, timestamp: iso } : e;
+  });
+
+  return carryForwardStatus(normalizedList);
 }
 
 /**
@@ -148,7 +157,11 @@ export function mergeTrackingResults(
 
   if (!existing) {
     const sanitizedEvents = (incoming.events || []).map((e) => sanitizeEventStatus(e, resolvedCarrier));
-    const processedEvents = carryForwardStatus(sanitizedEvents);
+    const normalizedEvents = sanitizedEvents.map((e) => {
+      const iso = normalizeCarrierDate(e.timestamp);
+      return iso ? { ...e, timestamp: iso } : e;
+    });
+    const processedEvents = carryForwardStatus(normalizedEvents);
     let computedStatus: ShipmentStatus;
     if (incoming.status === "delivered" || incoming.status === "returned") {
       computedStatus = incoming.status;
@@ -158,6 +171,7 @@ export function mergeTrackingResults(
     return {
       ...incoming,
       status: computedStatus,
+      estimatedDelivery: normalizeCarrierDate(incoming.estimatedDelivery) || incoming.estimatedDelivery,
       events: processedEvents,
     };
   }
@@ -179,13 +193,14 @@ export function mergeTrackingResults(
     }
   }
 
+  const rawEta = incoming.estimatedDelivery || existing.estimatedDelivery;
   return {
     ...incoming,
     status: computedStatus,
     statusText: computedStatusText,
     origin: incoming.origin || existing.origin,
     destination: incoming.destination || existing.destination,
-    estimatedDelivery: incoming.estimatedDelivery || existing.estimatedDelivery,
+    estimatedDelivery: normalizeCarrierDate(rawEta) || rawEta,
     events: mergedEvents,
   };
 }

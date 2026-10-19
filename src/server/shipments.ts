@@ -5,6 +5,7 @@ import { ShipmentStatus, TrackingResult } from "../carriers/types";
 import { detectCarriers, AUTO_CARRIER } from "../carriers/detect";
 import { accumulateTrackingResult, sanitizeEventStatus } from "./trackingHistory";
 import { carryForwardStatus, overallStatus } from "../carriers/normalize";
+import { parseCarrierDate, normalizeCarrierDate } from "../lib/dates";
 
 // Ensure cached_result column exists
 try {
@@ -69,10 +70,14 @@ export function toShipment(row: ShipmentRow): Shipment {
   if (cached && cached.events && cached.events.length > 0) {
     const sanitizedEvents = cached.events.map((e) => sanitizeEventStatus(e, row.carrier));
     const processedEvents = carryForwardStatus(sanitizedEvents);
-    cached.events = processedEvents;
+    const normalizedEvents = processedEvents.map((e) => {
+      const iso = normalizeCarrierDate(e.timestamp);
+      return iso ? { ...e, timestamp: iso } : e;
+    });
+    cached.events = normalizedEvents;
 
     if (effectiveStatus !== "delivered" && effectiveStatus !== "returned") {
-      const computed = overallStatus(processedEvents, cached.status, (effectiveStatus as ShipmentStatus));
+      const computed = overallStatus(normalizedEvents, cached.status, (effectiveStatus as ShipmentStatus));
       if (computed !== "unknown") {
         effectiveStatus = computed;
         cached.status = computed;
@@ -87,6 +92,8 @@ export function toShipment(row: ShipmentRow): Shipment {
     }
   }
 
+  const normalizedLastEventTime = normalizeCarrierDate(row.last_event_time) || row.last_event_time;
+
   return {
     id: row.id,
     userId: row.user_id,
@@ -98,7 +105,7 @@ export function toShipment(row: ShipmentRow): Shipment {
     origin: row.origin,
     destination: row.destination,
     lastEventText: row.last_event_text,
-    lastEventTime: row.last_event_time,
+    lastEventTime: normalizedLastEventTime,
     autoCheck: Boolean(row.auto_check),
     lastCheckedAt: row.last_checked_at,
     nextCheckAt: row.next_check_at,
@@ -108,6 +115,36 @@ export function toShipment(row: ShipmentRow): Shipment {
   };
 }
 
+export function sortShipments(shipments: Shipment[]): Shipment[] {
+  return shipments.sort((a, b) => {
+    const isFinishedA = a.status === "delivered" || a.status === "returned";
+    const isFinishedB = b.status === "delivered" || b.status === "returned";
+
+    // 1. Active shipments appear above delivered / completed shipments
+    if (!isFinishedA && isFinishedB) return -1;
+    if (isFinishedA && !isFinishedB) return 1;
+
+    // 2. Out for delivery & exceptions prioritized at the top of active
+    if (!isFinishedA && !isFinishedB) {
+      const priority = (s: string) => {
+        if (s === "out_for_delivery") return 1;
+        if (s === "exception") return 2;
+        if (s === "in_transit") return 3;
+        return 4;
+      };
+      const pA = priority(a.status);
+      const pB = priority(b.status);
+      if (pA !== pB) return pA - pB;
+    }
+
+    // 3. Chronological order by latest milestone date (newest first)
+    const timeA = parseCarrierDate(a.lastEventTime)?.getTime() ?? (a.updatedAt ? new Date(a.updatedAt).getTime() : 0);
+    const timeB = parseCarrierDate(b.lastEventTime)?.getTime() ?? (b.updatedAt ? new Date(b.updatedAt).getTime() : 0);
+
+    return timeB - timeA;
+  });
+}
+
 export function getUserShipments(userId: string): Shipment[] {
   const stmt = db.prepare(`
     SELECT * FROM shipments
@@ -115,7 +152,8 @@ export function getUserShipments(userId: string): Shipment[] {
     ORDER BY updated_at DESC
   `);
   const rows = stmt.all(userId) as unknown as ShipmentRow[];
-  return rows.map(toShipment);
+  const list = rows.map(toShipment);
+  return sortShipments(list);
 }
 
 export function getShipmentById(id: string, userId: string): Shipment | null {
@@ -211,7 +249,9 @@ export async function createShipment(
       const newEventText = topEvent
         ? topEvent.description || topEvent.statusText || topEvent.status
         : existingRow.last_event_text;
-      const newEventTime = topEvent ? topEvent.timestamp || null : existingRow.last_event_time;
+      const newEventTime = topEvent
+        ? normalizeCarrierDate(topEvent.timestamp) || topEvent.timestamp || null
+        : existingRow.last_event_time;
 
       const updateStmt = db.prepare(`
         UPDATE shipments
@@ -266,7 +306,7 @@ export async function createShipment(
   if (finalLive && finalLive.events && finalLive.events.length > 0) {
     const topEvent = finalLive.events[finalLive.events.length - 1];
     lastEventText = topEvent.description || topEvent.statusText || topEvent.status;
-    lastEventTime = topEvent.timestamp || null;
+    lastEventTime = topEvent ? normalizeCarrierDate(topEvent.timestamp) || topEvent.timestamp || null : null;
   }
 
   // Next check scheduled in 30 minutes if active
@@ -397,7 +437,7 @@ export async function syncShipment(id: string, userId: string): Promise<Shipment
   if (finalLive.events && finalLive.events.length > 0) {
     const topEvent = finalLive.events[finalLive.events.length - 1];
     lastEventText = topEvent.description || topEvent.statusText || topEvent.status;
-    lastEventTime = topEvent.timestamp || null;
+    lastEventTime = topEvent ? normalizeCarrierDate(topEvent.timestamp) || topEvent.timestamp || null : null;
   }
 
   const cachedJson = JSON.stringify(finalLive);

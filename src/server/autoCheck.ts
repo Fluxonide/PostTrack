@@ -5,6 +5,7 @@ import { getCarrier } from "../carriers/registry";
 import { CarrierError, TrackingResult, TrackingEvent } from "../carriers/types";
 import { ShipmentRow, toShipment } from "./shipments";
 import { accumulateTrackingResult } from "./trackingHistory";
+import { normalizeCarrierDate } from "../lib/dates";
 
 export interface ShipmentUpdateEvent {
   userId: string;
@@ -138,7 +139,7 @@ class AutoCheckWorker extends EventEmitter {
       const newEventText = topEvent
         ? topEvent.description || topEvent.statusText || topEvent.status
         : null;
-      const newEventTime = topEvent ? topEvent.timestamp || null : null;
+      const newEventTime = topEvent ? normalizeCarrierDate(topEvent.timestamp) || topEvent.timestamp || null : null;
 
       // Check if there is an update compared to previous state
       const normOldText = (row.last_event_text || "").trim().toLowerCase();
