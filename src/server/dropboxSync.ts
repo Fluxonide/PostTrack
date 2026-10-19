@@ -148,11 +148,26 @@ export async function runBackup(force = false): Promise<boolean> {
       return false;
     }
 
-    // Safety guard: never push an empty database over a populated remote database unless forced
+    // Safety guard 1: never push an empty database over a populated remote database
     const stats = getDbStats();
-    if (stats.userCount === 0 && stats.shipmentCount === 0 && !force) {
-      console.warn("[Dropbox] Aborting push — database has 0 users & shipments; avoiding overwrite of remote backup");
+    if (stats.userCount === 0 && stats.shipmentCount === 0) {
+      console.warn("[Dropbox] Aborting push — local database has 0 users & shipments; avoiding overwrite of remote backup");
       return false;
+    }
+
+    // Safety guard 2: verify remote file size; never overwrite a significantly larger remote database
+    try {
+      const remoteInfo = await getBackupInfo();
+      if (remoteInfo && remoteInfo.size > 0) {
+        if (remoteInfo.size > fileContent.length * 1.3) {
+          console.warn(
+            `[Dropbox] Aborting push — remote database is significantly larger (${remoteInfo.sizeMB} MB) than local (${(fileContent.length / 1048576).toFixed(2)} MB). Protecting remote database from overwrite!`
+          );
+          return false;
+        }
+      }
+    } catch (err) {
+      console.warn("[Dropbox] Pre-backup remote check warning:", err);
     }
 
     const fileContent = fs.readFileSync(dbPath);
