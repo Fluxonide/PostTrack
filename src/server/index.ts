@@ -310,6 +310,22 @@ const server = http.createServer(async (req, res) => {
       return sendJSON(res, 200, { ok, message: ok ? "Backup completed successfully" : "Backup failed or Dropbox not configured" });
     }
 
+    if (pathname === "/api/system/dropbox/restore" && req.method === "POST") {
+      const user = getAuthUser(req);
+      if (!user) return sendJSON(res, 401, { error: "unauthorized", message: "Not authenticated" });
+      try {
+        const restoredPath = await dropboxSync.restoreFromDropbox();
+        const status = await dropboxSync.getStatus();
+        return sendJSON(res, 200, {
+          ok: Boolean(restoredPath),
+          message: restoredPath ? "Database restored from Dropbox successfully" : "No remote backup found",
+          status,
+        });
+      } catch (err: any) {
+        return sendJSON(res, 500, { error: "restore_failed", message: err?.message || "Restore failed" });
+      }
+    }
+
     // Detect carriers for tracking number
     if (pathname === "/api/detect") {
       const q = parsedUrl.searchParams.get("q") || "";
