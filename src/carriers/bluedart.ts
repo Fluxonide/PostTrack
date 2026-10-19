@@ -1,5 +1,6 @@
 import { Carrier, CarrierError, ShipmentStatus, TrackingEvent, TrackingResult } from "./types";
 import { carryForwardStatus, overallStatus, stripTags } from "./normalize";
+import { normalizeCarrierDate } from "../lib/dates";
 
 const TRACK_URL = "https://www.bluedart.com/trackdartresultthirdparty";
 const UA = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
@@ -79,9 +80,9 @@ function parseScans(html: string): TrackingEvent[] {
     const cells = Array.from(row.matchAll(/<td[^>]*>([\s\S]*?)<\/td>/gi)).map((m) => stripTags(m[1]));
     if (cells.length < 4) continue;
     const [location, description, dateStr, timeStr] = cells;
-    if (!description) continue;
+    const rawTime = `${dateStr} ${timeStr}`.trim();
     events.push({
-      timestamp: `${dateStr} ${timeStr}`.trim(),
+      timestamp: normalizeCarrierDate(rawTime) || rawTime,
       status: mapStatus(description),
       location: location || undefined,
       description,
@@ -133,7 +134,7 @@ export const bluedart: Carrier = {
       carrierName: "Blue Dart",
       trackingNumber: cleaned,
       status: overallStatus(events, status ? mapStatus(status) : undefined),
-      estimatedDelivery: expectedDelivery,
+      estimatedDelivery: normalizeCarrierDate(expectedDelivery) || expectedDelivery,
       origin,
       destination,
       events,

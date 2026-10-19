@@ -1,5 +1,6 @@
 import { Carrier, CarrierError, ShipmentStatus, TrackingEvent, TrackingResult } from "./types";
 import { carryForwardStatus, overallStatus } from "./normalize";
+import { normalizeCarrierDate, parseCarrierDate } from "../lib/dates";
 
 const XPRESSBEES_ORIGIN = "https://www.xpressbees.com";
 const TRACKING_API_URL = `${XPRESSBEES_ORIGIN}/api/tracking`;
@@ -355,8 +356,9 @@ export const xpressbees: Carrier = {
     const rawEvents: TrackingEvent[] = [];
     if (history?.data && Array.isArray(history.data)) {
       for (const item of history.data) {
+        const rawTime = item.shipmentDate || "";
         rawEvents.push({
-          timestamp: item.shipmentDate || "",
+          timestamp: normalizeCarrierDate(rawTime) || rawTime,
           status: mapStatus(item.label),
           location: item.location || undefined,
           description: item.label || "Status update",
@@ -366,8 +368,9 @@ export const xpressbees: Carrier = {
     }
 
     if (rawEvents.length === 0 && domestic) {
+      const rawTime = domestic.shippingDate || "";
       rawEvents.push({
-        timestamp: domestic.shippingDate || "",
+        timestamp: normalizeCarrierDate(rawTime) || rawTime,
         status: mapStatus(domestic.status),
         location: domestic.origin || undefined,
         description: domestic.status || "Shipment recorded",
@@ -375,7 +378,13 @@ export const xpressbees: Carrier = {
       });
     }
 
-    const events = carryForwardStatus(rawEvents);
+    const sortedEvents = rawEvents.sort((a, b) => {
+      const timeA = parseCarrierDate(a.timestamp)?.getTime() ?? 0;
+      const timeB = parseCarrierDate(b.timestamp)?.getTime() ?? 0;
+      return timeA - timeB;
+    });
+
+    const events = carryForwardStatus(sortedEvents);
     const calculatedStatus = domestic?.status ? mapStatus(domestic.status) : overallStatus(events);
 
     return {
@@ -385,7 +394,7 @@ export const xpressbees: Carrier = {
       status: calculatedStatus,
       origin: domestic?.origin || undefined,
       destination: domestic?.destination || undefined,
-      estimatedDelivery: domestic?.EDD || undefined,
+      estimatedDelivery: normalizeCarrierDate(domestic?.EDD) || domestic?.EDD || undefined,
       events,
       fetchedAt: new Date().toISOString(),
       raw: {

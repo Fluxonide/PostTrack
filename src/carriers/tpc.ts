@@ -1,5 +1,6 @@
 import { Carrier, CarrierError, ShipmentStatus, TrackingEvent, TrackingResult } from "./types";
 import { carryForwardStatus, overallStatus } from "./normalize";
+import { normalizeCarrierDate } from "../lib/dates";
 
 const FEED_URL = "https://www.tpcindia.com/TPCWebService/TrackMobDe.ashx";
 const UA = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
@@ -72,10 +73,13 @@ function parseFeed(text: string): TrackingEvent[] {
     if (!activity) continue;
 
     const when = date ? parseWhen(date, time) : { display: "", epoch: NaN };
+    const isoTimestamp = Number.isFinite(when.epoch)
+      ? new Date(when.epoch).toISOString()
+      : normalizeCarrierDate(when.display) || when.display;
     scans.push({
       time: when.epoch,
       event: {
-        timestamp: when.display,
+        timestamp: isoTimestamp,
         status: mapStatus(activity),
         location: city || undefined,
         description: activity,

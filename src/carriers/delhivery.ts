@@ -1,5 +1,6 @@
 import { Carrier, CarrierError, ShipmentStatus, TrackingEvent, TrackingResult, TrackOptions } from "./types";
 import { carryForwardStatus, overallStatus } from "./normalize";
+import { normalizeCarrierDate } from "../lib/dates";
 
 const TRACK_URL = "https://track.delhivery.com/api/v1/packages/json/";
 const PUBLIC_URL = "https://dlv-api.delhivery.com/v3/unified-tracking";
@@ -174,7 +175,8 @@ function parsePublicEvents(d: PublicShipment): TrackingEvent[] {
       const description = sc.scanNslRemark || sc.scan;
       if (!description) continue;
       const combinedText = [sc.scan, sc.scanNslRemark].filter(Boolean).join(" - ");
-      const timestamp = sc.scanDateTime || sc.scanDate || state.scanDateTime || state.date || d.status?.statusDateTime || "";
+      const rawTimestamp = sc.scanDateTime || sc.scanDate || state.scanDateTime || state.date || d.status?.statusDateTime || "";
+      const timestamp = normalizeCarrierDate(rawTimestamp) || rawTimestamp;
       events.push({
         timestamp,
         status: mapStatus(sc.scanType, combinedText),
@@ -191,16 +193,17 @@ function parsePublicEvents(d: PublicShipment): TrackingEvent[] {
     const combinedStatusText = [d.hqStatus, st.status, st.instructions].filter(Boolean).join(" - ");
     const last = events[events.length - 1];
     const latestKnownLoc = [...events].reverse().find((e) => e.location)?.location;
+    const statusTime = normalizeCarrierDate(st.statusDateTime) || st.statusDateTime;
 
     if (last && last.description === description) {
-      last.timestamp = st.statusDateTime;
+      last.timestamp = statusTime;
       if (!last.location && latestKnownLoc) {
         last.location = latestKnownLoc;
       }
       last.status = mapStatus(st.statusType, combinedStatusText);
     } else {
       events.push({
-        timestamp: st.statusDateTime,
+        timestamp: statusTime,
         status: mapStatus(st.statusType, combinedStatusText),
         location: latestKnownLoc,
         description,
@@ -251,7 +254,7 @@ async function trackViaPublic(cleaned: string): Promise<TrackingResult> {
     carrierName: "Delhivery",
     trackingNumber: cleaned,
     status: overallStatus(events, fallbackStatus),
-    estimatedDelivery: d.deliveryDate || d.promiseDeliveryDate || undefined,
+    estimatedDelivery: normalizeCarrierDate(d.deliveryDate || d.promiseDeliveryDate) || undefined,
     destination: d.destination || undefined,
     events,
     fetchedAt: new Date().toISOString(),
