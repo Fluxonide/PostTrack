@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import confetti from "canvas-confetti";
 import type { TrackingResult } from "../carriers/types";
-import { formatCarrierDate, formatEta, displayCarrierDate, parseCarrierDate } from "../lib/dates";
+import { describeEta, displayCarrierDate, parseCarrierDate } from "../lib/dates";
 import { humanStatus } from "../lib/status";
 import { showToast } from "../lib/toast";
 import { JourneyProgress } from "./JourneyProgress";
@@ -64,7 +64,7 @@ export const TrackingCard: React.FC<TrackingCardProps> = ({
     }
   };
 
-  const etaText = formatEta(result.estimatedDelivery);
+  const eta = describeEta(result.estimatedDelivery);
 
   // Confetti on delivered status
   useEffect(() => {
@@ -323,9 +323,11 @@ export const TrackingCard: React.FC<TrackingCardProps> = ({
 
         <div className="stat-card">
           <div className="stat-num" style={{ color: "var(--accent)" }}>
-            {etaText || "Scheduled"}
+            {eta ? eta.rangeText : "Scheduled"}
           </div>
-          <div className="stat-label">Expected Delivery</div>
+          <div className="stat-label">
+            {eta?.daysText ? `Expected Delivery · ${eta.daysText}` : "Expected Delivery"}
+          </div>
         </div>
       </div>
 

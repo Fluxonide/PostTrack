@@ -149,3 +149,128 @@ export function formatEta(raw: string | undefined | null): string {
   return d ? formatCarrierDate(d, false) : (raw ?? "").trim();
 }
 
+function istYmd(d: Date): { y: number; mo: number; day: number } {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Asia/Kolkata",
+    year: "numeric",
+    month: "numeric",
+    day: "numeric",
+  }).formatToParts(d);
+  const get = (type: string) => Number(parts.find((p) => p.type === type)?.value);
+  return { y: get("year"), mo: get("month") - 1, day: get("day") };
+}
+
+function shortIstDate(d: Date): string {
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone: "Asia/Kolkata",
+    month: "short",
+    day: "numeric",
+  }).format(d);
+}
+
+function monthNumber(name: string | undefined): number | undefined {
+  if (!name) return undefined;
+  const key = name.toLowerCase();
+  return MONTHS[key.slice(0, 4)] ?? MONTHS[key.slice(0, 3)];
+}
+
+const DAY_PART = String.raw`(\d{1,2})(?:st|nd|rd|th)?`;
+const MONTH_PART = String.raw`([A-Za-z]{3,9})`;
+// "10 - 17th", "10 Oct - 17 Oct", "10th-17th Nov"
+const RANGE_DAYS_FIRST = new RegExp(
+  String.raw`^${DAY_PART}(?:\s+${MONTH_PART})?\s*(?:-|–|—|to)\s*${DAY_PART}(?:\s+${MONTH_PART})?(?:,?\s*(\d{4}))?$`,
+  "i"
+);
+// "Nov 10 - Nov 17", "Oct 10th - 17th"
+const RANGE_MONTH_FIRST = new RegExp(
+  String.raw`^${MONTH_PART}\s+${DAY_PART}\s*(?:-|–|—|to)\s*(?:${MONTH_PART}\s+)?${DAY_PART}(?:,?\s*(\d{4}))?$`,
+  "i"
+);
+
+export interface EtaWindow {
+  start: Date | null;
+  end: Date;
+}
+
+/** Parse carrier ETAs that may be a single date or a delivery window (e.g. "10 - 17th"). */
+export function parseEtaWindow(raw: string | null | undefined): EtaWindow | null {
+  if (!raw) return null;
+  const cleaned = String(raw)
+    .trim()
+    .replace(/^(?:estimated|expected|delivery|arriving|arrives|by|on)\s+/gi, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!cleaned) return null;
+
+  const today = istYmd(new Date());
+
+  let m = cleaned.match(RANGE_DAYS_FIRST);
+  if (m) {
+    const year = m[5] ? Number(m[5]) : today.y;
+    const startMonth = monthNumber(m[2]) ?? monthNumber(m[4]) ?? today.mo;
+    const endMonth = monthNumber(m[4]) ?? startMonth;
+    const start = new Date(fromIst(year, startMonth, Number(m[1])));
+    let end = new Date(fromIst(year, endMonth, Number(m[3])));
+    if (end.getTime() < start.getTime()) {
+      end = new Date(fromIst(year + 1, endMonth, Number(m[3])));
+    }
+    return { start, end };
+  }
+
+  m = cleaned.match(RANGE_MONTH_FIRST);
+  if (m) {
+    const year = m[5] ? Number(m[5]) : today.y;
+    const startMonth = monthNumber(m[1]) ?? today.mo;
+    const endMonth = monthNumber(m[3]) ?? startMonth;
+    const start = new Date(fromIst(year, startMonth, Number(m[2])));
+    let end = new Date(fromIst(year, endMonth, Number(m[4])));
+    if (end.getTime() < start.getTime()) {
+      end = new Date(fromIst(year + 1, endMonth, Number(m[4])));
+    }
+    return { start, end };
+  }
+
+  const single = parseCarrierDate(cleaned);
+  if (single) return { start: single, end: single };
+
+  return null;
+}
+
+export interface EtaDisplay {
+  rangeText: string;
+  daysText: string | null;
+  daysRemaining: number | null;
+}
+
+/** Human-readable ETA window plus the number of days remaining (negative when overdue). */
+export function describeEta(raw: string | null | undefined, now: Date = new Date()): EtaDisplay | null {
+  const window = parseEtaWindow(raw);
+  if (!window) return null;
+
+  const startParts = window.start ? istYmd(window.start) : null;
+  const endParts = istYmd(window.end);
+  const todayParts = istYmd(now);
+
+  const isRange =
+    startParts !== null &&
+    Date.UTC(startParts.y, startParts.mo, startParts.day) !== Date.UTC(endParts.y, endParts.mo, endParts.day);
+
+  const rangeText = isRange && window.start
+    ? `${shortIstDate(window.start)} – ${shortIstDate(window.end)}`
+    : shortIstDate(window.end);
+
+  const daysRemaining = Math.round(
+    (Date.UTC(endParts.y, endParts.mo, endParts.day) - Date.UTC(todayParts.y, todayParts.mo, todayParts.day)) /
+      86_400_000
+  );
+
+  let daysText: string;
+  if (daysRemaining > 1) daysText = `${daysRemaining} days left`;
+  else if (daysRemaining === 1) daysText = "1 day left";
+  else if (daysRemaining === 0) daysText = "Arrives today";
+  else if (daysRemaining === -1) daysText = "1 day overdue";
+  else daysText = `${Math.abs(daysRemaining)} days overdue`;
+
+  return { rangeText, daysText, daysRemaining };
+}
+

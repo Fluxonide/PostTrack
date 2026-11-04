@@ -12,3 +12,4 @@ yarn-error.log*
 data/
 *.db
 *.sqlite
+firebase-service-account.json

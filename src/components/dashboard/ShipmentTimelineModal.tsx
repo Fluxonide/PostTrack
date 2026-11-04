@@ -2,7 +2,7 @@ import React from "react";
 import { ShipmentItem } from "./types";
 import { JourneyProgress } from "../JourneyProgress";
 import { ShipmentMap } from "../ShipmentMap";
-import { displayCarrierDate } from "../../lib/dates";
+import { displayCarrierDate, describeEta } from "../../lib/dates";
 
 interface ShipmentTimelineModalProps {
   shipment: ShipmentItem | null;
@@ -14,6 +14,8 @@ export const ShipmentTimelineModal: React.FC<ShipmentTimelineModalProps> = ({
   onClose,
 }) => {
   if (!shipment || !shipment.cachedResult) return null;
+
+  const eta = describeEta(shipment.cachedResult.estimatedDelivery);
 
   return (
     <div className="modal-overlay open" onClick={onClose}>
@@ -37,6 +39,15 @@ export const ShipmentTimelineModal: React.FC<ShipmentTimelineModalProps> = ({
             <div style={{ fontSize: 12, color: "var(--text-3)", marginTop: 4, fontFamily: "var(--mono)" }}>
               {shipment.trackingNumber}
             </div>
+            {eta && (
+              <div style={{ fontSize: 12, color: "var(--text-2)", marginTop: 6 }}>
+                Estimated delivery{" "}
+                <span style={{ color: "var(--text)", fontWeight: 600 }}>{eta.rangeText}</span>
+                {eta.daysText && shipment.status !== "delivered" && (
+                  <span style={{ color: "var(--text-3)" }}> · {eta.daysText}</span>
+                )}
+              </div>
+            )}
           </div>
           <button className="modal-close" onClick={onClose} title="Close">
             ✕

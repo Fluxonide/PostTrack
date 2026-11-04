@@ -21,11 +21,12 @@ const STEP_ICONS: Record<string, React.ReactNode> = {
       <path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 13" />
     </svg>
   ),
-  // In Transit: a truck moving
+  // In Transit: a delivery truck
   in_transit: (
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2" />
-      <path d="M15 18h2a1 1 0 0 0 1-1v-3.28a1 1 0 0 0-.684-.948l-1.923-.641a1 1 0 0 1-.684-.948V8h2a1 1 0 0 1 1 1v2" />
+      <path d="M15 18H9" />
+      <path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14" />
       <circle cx="17" cy="18" r="2" />
       <circle cx="7" cy="18" r="2" />
     </svg>
@@ -126,7 +127,7 @@ export const JourneyProgress: React.FC<JourneyProgressProps> = ({ status, events
         <span style={{ color: "var(--text-3)", textTransform: "uppercase", letterSpacing: "0.5px", fontSize: 11 }}>
           Shipment Progress
         </span>
-        <span style={{ color: "var(--accent)", fontWeight: 600 }}>
+        <span style={{ color: meta.textColor, fontWeight: 600 }}>
           {activeLabel}
         </span>
       </div>
@@ -168,17 +169,17 @@ export const JourneyProgress: React.FC<JourneyProgressProps> = ({ status, events
                     alignItems: "center",
                     justifyContent: "center",
                     background: isCurrent
-                      ? "var(--accent)"
+                      ? meta.textColor
                       : isDone
                       ? "#1e1a12"
                       : "var(--bg-2)",
-                    color: isCurrent ? "#0a0906" : isDone ? "var(--accent)" : "var(--text-3)",
+                    color: isCurrent ? "#0a0906" : isDone ? meta.textColor : "var(--text-3)",
                     border: isCurrent
-                      ? "2px solid var(--accent)"
+                      ? `2px solid ${meta.textColor}`
                       : isDone
-                      ? "1.5px solid var(--accent)"
+                      ? `1.5px solid ${meta.badgeBorder}`
                       : "1px solid var(--border)",
-                    boxShadow: isCurrent ? "0 0 16px rgba(192, 133, 50, 0.45)" : "none",
+                    boxShadow: isCurrent ? `0 0 16px ${meta.badgeBorder}` : "none",
                     transition: "all var(--transition)",
                   }}
                 >
@@ -193,7 +194,7 @@ export const JourneyProgress: React.FC<JourneyProgressProps> = ({ status, events
                     fontFamily: "var(--mono)",
                     fontWeight: isCurrent ? 600 : 500,
                     color: isCurrent
-                      ? "var(--accent)"
+                      ? meta.textColor
                       : isDone
                       ? "var(--text)"
                       : "var(--text-3)",
@@ -217,7 +218,7 @@ export const JourneyProgress: React.FC<JourneyProgressProps> = ({ status, events
                     marginLeft: 6,
                     marginRight: 6,
                     background: isSegmentCompleted
-                      ? "linear-gradient(90deg, var(--accent) 0%, var(--accent-2) 100%)"
+                      ? `linear-gradient(90deg, ${meta.textColor} 0%, ${meta.dotColor} 100%)`
                       : "var(--border)",
                     transition: "background 0.3s ease",
                   }}

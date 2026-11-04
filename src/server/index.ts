@@ -25,6 +25,7 @@ import {
 import { carrierRateLimiter } from "./rateLimiter";
 import { autoCheckWorker } from "./autoCheck";
 import { telegramService } from "./telegram";
+import { pushService } from "./push";
 import { db } from "./db";
 import { accumulateTrackingResult, getHistoryCache } from "./trackingHistory";
 
@@ -38,7 +39,8 @@ function sendJSON(res: http.ServerResponse, status: number, data: unknown): void
     "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Headers": "Content-Type, Authorization",
     "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
-    "Cache-Control": status === 200 && !res.req?.url?.startsWith("/api/auth") ? "public, s-maxage=120, stale-while-revalidate=300" : "no-store",
+    // API responses are user-specific and must never be cached by browsers or shared proxies.
+    "Cache-Control": "no-store",
   });
   res.end(json);
 }
@@ -235,6 +237,35 @@ const server = http.createServer(async (req, res) => {
         if (!synced) return sendJSON(res, 404, { error: "not_found", message: "Shipment not found" });
         return sendJSON(res, 200, { shipment: synced });
       }
+    }
+
+    // Android push (FCM) device registration (Protected)
+    if (pathname === "/api/devices/register" && req.method === "POST") {
+      const user = getAuthUser(req);
+      if (!user) return sendJSON(res, 401, { error: "unauthorized", message: "Not authenticated" });
+
+      const body = await readJSONBody<{ token?: string; platform?: string }>(req);
+      const token = (body.token || "").trim();
+      if (!token) {
+        return sendJSON(res, 400, { error: "bad_request", message: "Device token is required." });
+      }
+
+      pushService.registerToken(user.id, token, body.platform || "android");
+      return sendJSON(res, 200, { ok: true });
+    }
+
+    if (pathname === "/api/devices/unregister" && req.method === "POST") {
+      const user = getAuthUser(req);
+      if (!user) return sendJSON(res, 401, { error: "unauthorized", message: "Not authenticated" });
+
+      const body = await readJSONBody<{ token?: string }>(req);
+      const token = (body.token || "").trim();
+      if (!token) {
+        return sendJSON(res, 400, { error: "bad_request", message: "Device token is required." });
+      }
+
+      pushService.removeTokenForUser(user.id, token);
+      return sendJSON(res, 200, { ok: true });
     }
 
     // Telegram Integration endpoints (Protected)
@@ -489,4 +520,5 @@ server.listen(PORT, () => {
   console.log(`[PostTrack Server] Running at http://localhost:${PORT}`);
   autoCheckWorker.start(30000);
   telegramService.init().catch((err) => console.error("[Telegram] Init error:", err));
+  pushService.init();
 });
