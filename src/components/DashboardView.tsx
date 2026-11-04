@@ -48,6 +48,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     try {
       const res = await fetch("/api/shipments", {
         headers: { Authorization: `Bearer ${token}` },
+        cache: "no-store",
       });
       if (res.ok) {
         const data = await res.json() as { shipments: ShipmentItem[] };
@@ -84,7 +85,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
       showToast("Shipment added to dashboard!");
       setIsAddOpen(false);
-      fetchShipments();
+
+      // Show the new/updated shipment immediately instead of waiting for the refetch.
+      if (data.shipment) {
+        const added = data.shipment;
+        setShipments((prev) => [added, ...prev.filter((s) => s.id !== added.id)]);
+      }
+
+      await fetchShipments();
     } catch (err) {
       showToast(err instanceof Error ? err.message : "Error adding shipment", "error");
     } finally {

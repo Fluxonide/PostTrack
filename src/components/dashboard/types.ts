@@ -1,6 +1,7 @@
 import React from "react";
 import { TrackingResult } from "../../carriers/types";
 import { AUTO_CARRIER } from "../../carriers/detect";
+import { STATUS_PALETTE, statusPaletteKey } from "../../lib/status";
 
 export interface ShipmentItem {
   id: string;
@@ -69,33 +70,10 @@ export function formatStatusText(status: string, statusText: string | null): str
 }
 
 export function getStatusBadgeStyle(status: string): React.CSSProperties {
-  switch (status.toLowerCase()) {
-    case "delivered":
-      return { background: "rgba(74, 222, 128, 0.12)", color: "#4ade80" };
-    case "out_for_delivery":
-      return { background: "rgba(251, 191, 36, 0.12)", color: "#fbbf24" };
-    case "in_transit":
-      return { background: "rgba(192, 133, 50, 0.15)", color: "var(--accent)" };
-    case "exception":
-    case "returned":
-      return { background: "rgba(248, 113, 113, 0.12)", color: "#f87171" };
-    default:
-      return { background: "var(--color-surface)", color: "var(--text-2)" };
-  }
+  const palette = STATUS_PALETTE[statusPaletteKey(status)];
+  return { background: palette.badgeBg, color: palette.textColor };
 }
 
 export function getStatusDotColor(status: string): string {
-  switch (status.toLowerCase()) {
-    case "delivered":
-      return "#4ade80";
-    case "out_for_delivery":
-      return "#fbbf24";
-    case "in_transit":
-      return "var(--accent)";
-    case "exception":
-    case "returned":
-      return "#f87171";
-    default:
-      return "var(--text-3)";
-  }
+  return STATUS_PALETTE[statusPaletteKey(status)].dotColor;
 }

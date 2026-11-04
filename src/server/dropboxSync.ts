@@ -156,6 +156,7 @@ export async function runBackup(force = false): Promise<boolean> {
     }
 
     // Safety guard 2: verify remote file size; never overwrite a significantly larger remote database
+    const fileContent = fs.readFileSync(dbPath);
     try {
       const remoteInfo = await getBackupInfo();
       if (remoteInfo && remoteInfo.size > 0) {
@@ -170,7 +171,6 @@ export async function runBackup(force = false): Promise<boolean> {
       console.warn("[Dropbox] Pre-backup remote check warning:", err);
     }
 
-    const fileContent = fs.readFileSync(dbPath);
     const token = await getAccessToken();
     const apiArg = JSON.stringify({
       path: DROPBOX_PATH,

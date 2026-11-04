@@ -44,6 +44,16 @@ export function initDbSchema(): void {
     CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id);
     CREATE INDEX IF NOT EXISTS idx_users_telegram_code ON users(telegram_link_code);
 
+    CREATE TABLE IF NOT EXISTS device_tokens (
+      token TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      platform TEXT NOT NULL DEFAULT 'android',
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_device_tokens_user_id ON device_tokens(user_id);
+
     CREATE TABLE IF NOT EXISTS shipments (
       id TEXT PRIMARY KEY,
       user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,

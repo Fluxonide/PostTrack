@@ -7,6 +7,7 @@ import {
   FaEdit,
   FaArrowRight,
   FaClock,
+  FaCalendarAlt,
 } from "react-icons/fa";
 import {
   ShipmentItem,
@@ -15,7 +16,7 @@ import {
   getStatusBadgeStyle,
   getStatusDotColor,
 } from "./types";
-import { formatEventTime } from "../../lib/dates";
+import { formatEventTime, describeEta } from "../../lib/dates";
 
 interface ShipmentCardProps {
   shipment: ShipmentItem;
@@ -57,6 +58,10 @@ export const ShipmentCard: React.FC<ShipmentCardProps> = ({
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [labelText, setLabelText] = useState(shipment.label || "");
+
+  const eta = shipment.cachedResult?.estimatedDelivery
+    ? describeEta(shipment.cachedResult.estimatedDelivery)
+    : null;
 
   const handleSave = () => {
     onSaveLabel(shipment.id, labelText);
@@ -233,6 +238,52 @@ export const ShipmentCard: React.FC<ShipmentCardProps> = ({
             <span style={{ color: "var(--text)" }}>{shipment.origin || "Origin"}</span>
             <FaArrowRight size={10} style={{ color: "var(--text-3)" }} />
             <span style={{ color: "var(--text)" }}>{shipment.destination || "Destination"}</span>
+          </div>
+        )}
+
+        {eta && (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              flexWrap: "wrap",
+              fontSize: 12,
+              color: "var(--text-2)",
+            }}
+          >
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+              <FaCalendarAlt size={10} style={{ color: "var(--text-3)" }} />
+              <span>
+                Estimated delivery{" "}
+                <span style={{ color: "var(--text)", fontWeight: 600 }}>{eta.rangeText}</span>
+              </span>
+            </span>
+            {shipment.status !== "delivered" && eta.daysText && (
+              <span
+                style={{
+                  padding: "1px 8px",
+                  borderRadius: "var(--radius-pill)",
+                  fontSize: 11,
+                  fontWeight: 600,
+                  color:
+                    eta.daysRemaining !== null && eta.daysRemaining < 0
+                      ? "#f87171"
+                      : eta.daysRemaining !== null && eta.daysRemaining <= 1
+                      ? "#fbbf24"
+                      : "var(--text-2)",
+                  background:
+                    eta.daysRemaining !== null && eta.daysRemaining < 0
+                      ? "rgba(248, 113, 113, 0.12)"
+                      : eta.daysRemaining !== null && eta.daysRemaining <= 1
+                      ? "rgba(251, 191, 36, 0.12)"
+                      : "var(--color-surface)",
+                  border: "1px solid var(--border)",
+                }}
+              >
+                {eta.daysText}
+              </span>
+            )}
           </div>
         )}
 
