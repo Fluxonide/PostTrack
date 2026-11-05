@@ -178,7 +178,7 @@ export const AddShipmentModal: React.FC<AddShipmentModalProps> = ({
               marginTop: 8,
               padding: "12px",
               background: "var(--accent)",
-              color: "#14120b",
+              color: "var(--accent-contrast, #ffffff)",
               border: "none",
               borderRadius: 8,
               fontSize: 14,

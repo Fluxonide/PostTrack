@@ -321,7 +321,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               borderRadius: 8,
               border: "none",
               background: "var(--accent)",
-              color: "#14120b",
+              color: "var(--accent-contrast, #ffffff)",
               fontWeight: 600,
               fontSize: 13,
               cursor: "pointer",
@@ -360,7 +360,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             style={{
               padding: "10px 18px",
               background: "var(--accent)",
-              color: "#14120b",
+              color: "var(--accent-contrast, #ffffff)",
               border: "none",
               borderRadius: 8,
               fontWeight: 600,

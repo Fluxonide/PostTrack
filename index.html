@@ -17,6 +17,21 @@
       href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
+    <!-- Theme Initialization Script (Prevents flash of wrong theme) -->
+    <script>
+      (function() {
+        try {
+          var stored = localStorage.getItem("posttrack_theme");
+          var theme = stored || (window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark");
+          document.documentElement.setAttribute("data-theme", theme);
+          if (theme === "dark") {
+            document.documentElement.classList.add("dark");
+          } else {
+            document.documentElement.classList.add("light");
+          }
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body>
     <div class="glow-orb glow-orb-2"></div>

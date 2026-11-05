@@ -100,8 +100,8 @@ export const SearchHero: React.FC<SearchHeroProps> = ({
                   key={tab.id}
                   value={tab.id}
                   style={{
-                    background: "#14120b",
-                    color: "#edecec",
+                    background: "var(--bg)",
+                    color: "var(--text)",
                   }}
                 >
                   {tab.name}

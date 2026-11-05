@@ -289,7 +289,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
               marginTop: 10,
               padding: "12px",
               background: "var(--accent)",
-              color: "#14120b",
+              color: "var(--accent-contrast, #ffffff)",
               border: "none",
               borderRadius: 8,
               fontSize: 14,

@@ -10,6 +10,7 @@ import { AuthModal } from "./components/AuthModal";
 import { TelegramModal } from "./components/TelegramModal";
 import { DashboardView } from "./components/DashboardView";
 import { AuthProvider, useAuth } from "./lib/authContext";
+import { ThemeProvider } from "./lib/themeContext";
 import { showToast } from "./lib/toast";
 import {
   getRecentShipments,
@@ -302,8 +303,10 @@ function AppContent() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <AppContent />
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
+    </ThemeProvider>
   );
 }

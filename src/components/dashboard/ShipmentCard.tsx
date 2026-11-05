@@ -115,7 +115,7 @@ export const ShipmentCard: React.FC<ShipmentCardProps> = ({
                   style={{
                     padding: "4px 8px",
                     background: "var(--accent)",
-                    color: "#14120b",
+                    color: "var(--accent-contrast, #ffffff)",
                     border: "none",
                     borderRadius: 6,
                     fontSize: 12,

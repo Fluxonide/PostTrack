@@ -171,9 +171,9 @@ export const JourneyProgress: React.FC<JourneyProgressProps> = ({ status, events
                     background: isCurrent
                       ? meta.textColor
                       : isDone
-                      ? "#1e1a12"
+                      ? "var(--surface-hover)"
                       : "var(--bg-2)",
-                    color: isCurrent ? "#0a0906" : isDone ? meta.textColor : "var(--text-3)",
+                    color: isCurrent ? "var(--bg)" : isDone ? meta.textColor : "var(--text-3)",
                     border: isCurrent
                       ? `2px solid ${meta.textColor}`
                       : isDone

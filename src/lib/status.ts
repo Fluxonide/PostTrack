@@ -20,28 +20,28 @@ export interface StatusMeta {
  */
 export const STATUS_PALETTE = {
   transit: {
-    badgeBg: "rgba(192, 133, 50, 0.15)",
-    badgeBorder: "rgba(212, 160, 74, 0.35)",
-    textColor: "#d4a04a",
-    dotColor: "#d4a04a",
+    badgeBg: "var(--status-transit-bg, rgba(192, 133, 50, 0.15))",
+    badgeBorder: "var(--status-transit-border, rgba(212, 160, 74, 0.35))",
+    textColor: "var(--status-transit-text, #d4a04a)",
+    dotColor: "var(--status-transit-dot, #d4a04a)",
   },
   delivered: {
-    badgeBg: "rgba(74, 222, 128, 0.12)",
-    badgeBorder: "rgba(74, 222, 128, 0.28)",
-    textColor: "#4ade80",
-    dotColor: "#4ade80",
+    badgeBg: "var(--status-delivered-bg, rgba(74, 222, 128, 0.12))",
+    badgeBorder: "var(--status-delivered-border, rgba(74, 222, 128, 0.28))",
+    textColor: "var(--status-delivered-text, #4ade80)",
+    dotColor: "var(--status-delivered-dot, #4ade80)",
   },
   exception: {
-    badgeBg: "rgba(248, 113, 113, 0.12)",
-    badgeBorder: "rgba(248, 113, 113, 0.28)",
-    textColor: "#f87171",
-    dotColor: "#f87171",
+    badgeBg: "var(--status-exception-bg, rgba(248, 113, 113, 0.12))",
+    badgeBorder: "var(--status-exception-border, rgba(248, 113, 113, 0.28))",
+    textColor: "var(--status-exception-text, #f87171)",
+    dotColor: "var(--status-exception-dot, #f87171)",
   },
   neutral: {
-    badgeBg: "rgba(237, 236, 236, 0.06)",
-    badgeBorder: "rgba(237, 236, 236, 0.12)",
-    textColor: "rgba(237, 236, 236, 0.5)",
-    dotColor: "rgba(237, 236, 236, 0.4)",
+    badgeBg: "var(--surface)",
+    badgeBorder: "var(--border)",
+    textColor: "var(--text-2)",
+    dotColor: "var(--text-3)",
   },
 } as const;
 
