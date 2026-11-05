@@ -10,6 +10,7 @@ import { AuthModal } from "./components/AuthModal";
 import { TelegramModal } from "./components/TelegramModal";
 import { DashboardView } from "./components/DashboardView";
 import { AuthProvider, useAuth } from "./lib/authContext";
+import { ThemeProvider } from "./lib/themeContext";
 import { showToast } from "./lib/toast";
 import {
   getRecentShipments,
@@ -256,6 +257,7 @@ function AppContent() {
 
       {/* Footer */}
       <footer
+        className="site-footer"
         style={{
           borderTop: "1px solid var(--border)",
           padding: "24px 40px",
@@ -267,6 +269,7 @@ function AppContent() {
         }}
       >
         <div
+          className="site-footer-inner"
           style={{
             maxWidth: 1040,
             margin: "0 auto",
@@ -302,8 +305,10 @@ function AppContent() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <AppContent />
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
+    </ThemeProvider>
   );
 }

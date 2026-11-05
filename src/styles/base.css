@@ -1,5 +1,6 @@
 /* ===== DESIGN SYSTEM ===== */
-:root {
+:root,
+[data-theme="dark"] {
   --bg: #14120b;
   --bg-2: #1a1710;
   --bg-3: #211e15;
@@ -10,15 +11,73 @@
   --accent: #c08532;
   --accent-2: #d4a04a;
   --accent-glow: rgba(192, 133, 50, 0.25);
+  --accent-contrast: #14120b;
   --text: #edecec;
   --text-2: rgba(237, 236, 236, 0.55);
   --text-3: rgba(237, 236, 236, 0.3);
+  --nav-bg: rgba(20, 18, 11, 0.85);
+  --modal-overlay-bg: rgba(0, 0, 0, 0.7);
+  --shadow-card: 0 8px 32px rgba(0, 0, 0, 0.3);
+  --map-loading-bg: rgba(20, 18, 11, 0.8);
   --mono: "JetBrains Mono", monospace;
   --sans: "Inter", sans-serif;
   --radius: 14px;
   --radius-sm: 8px;
   --radius-pill: 999px;
   --transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+
+  --status-transit-text: #d4a04a;
+  --status-transit-dot: #d4a04a;
+  --status-transit-bg: rgba(192, 133, 50, 0.15);
+  --status-transit-border: rgba(212, 160, 74, 0.35);
+  --status-delivered-text: #4ade80;
+  --status-delivered-dot: #4ade80;
+  --status-delivered-bg: rgba(74, 222, 128, 0.12);
+  --status-delivered-border: rgba(74, 222, 128, 0.28);
+  --status-exception-text: #f87171;
+  --status-exception-dot: #f87171;
+  --status-exception-bg: rgba(248, 113, 113, 0.12);
+  --status-exception-border: rgba(248, 113, 113, 0.28);
+
+  color-scheme: dark;
+}
+
+:root[data-theme="light"],
+[data-theme="light"],
+.light {
+  --bg: #f8f7f4;
+  --bg-2: #ffffff;
+  --bg-3: #f0eeea;
+  --surface: rgba(25, 22, 16, 0.04);
+  --surface-hover: rgba(25, 22, 16, 0.08);
+  --border: rgba(25, 22, 16, 0.10);
+  --border-hover: rgba(25, 22, 16, 0.18);
+  --accent: #b45309;
+  --accent-2: #92400e;
+  --accent-glow: rgba(180, 83, 9, 0.20);
+  --accent-contrast: #ffffff;
+  --text: #191612;
+  --text-2: #524d44;
+  --text-3: #827b70;
+  --nav-bg: rgba(248, 247, 244, 0.88);
+  --modal-overlay-bg: rgba(25, 22, 16, 0.45);
+  --shadow-card: 0 8px 30px rgba(0, 0, 0, 0.06);
+  --map-loading-bg: rgba(248, 247, 244, 0.85);
+
+  --status-transit-text: #b45309;
+  --status-transit-dot: #b45309;
+  --status-transit-bg: rgba(180, 83, 9, 0.10);
+  --status-transit-border: rgba(180, 83, 9, 0.25);
+  --status-delivered-text: #15803d;
+  --status-delivered-dot: #16a34a;
+  --status-delivered-bg: rgba(22, 163, 74, 0.10);
+  --status-delivered-border: rgba(22, 163, 74, 0.25);
+  --status-exception-text: #dc2626;
+  --status-exception-dot: #dc2626;
+  --status-exception-bg: rgba(220, 38, 38, 0.10);
+  --status-exception-border: rgba(220, 38, 38, 0.25);
+
+  color-scheme: light;
 }
 
 *,

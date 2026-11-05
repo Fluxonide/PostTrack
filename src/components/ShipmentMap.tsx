@@ -106,22 +106,22 @@ export const ShipmentMap: React.FC<ShipmentMapProps> = ({
       } else if (pt.isDestination) {
         // Green destination marker
         markerHtml = `
-          <div style="width: 18px; height: 18px; border-radius: 50%; background: #4ade80; border: 2px solid #14120b; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 6px rgba(0,0,0,0.6);">
-            <div style="width: 6px; height: 6px; border-radius: 50%; background: #14120b;"></div>
+          <div style="width: 18px; height: 18px; border-radius: 50%; background: #4ade80; border: 2px solid var(--bg); display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 6px rgba(0,0,0,0.4);">
+            <div style="width: 6px; height: 6px; border-radius: 50%; background: var(--bg);"></div>
           </div>
         `;
       } else if (pt.isOrigin) {
         // Amber origin marker
         markerHtml = `
-          <div style="width: 18px; height: 18px; border-radius: 50%; background: #d4a04a; border: 2px solid #14120b; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 6px rgba(0,0,0,0.6);">
-            <div style="width: 6px; height: 6px; border-radius: 50%; background: #14120b;"></div>
+          <div style="width: 18px; height: 18px; border-radius: 50%; background: var(--accent-2); border: 2px solid var(--bg); display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 6px rgba(0,0,0,0.4);">
+            <div style="width: 6px; height: 6px; border-radius: 50%; background: var(--bg);"></div>
           </div>
         `;
       } else {
         // Intermediate transit hub marker
         markerHtml = `
-          <div style="width: 14px; height: 14px; border-radius: 50%; background: #211e15; border: 2px solid #c08532; display: flex; align-items: center; justify-content: center;">
-            <div style="width: 4px; height: 4px; border-radius: 50%; background: #c08532;"></div>
+          <div style="width: 14px; height: 14px; border-radius: 50%; background: var(--bg-3); border: 2px solid var(--accent); display: flex; align-items: center; justify-content: center;">
+            <div style="width: 4px; height: 4px; border-radius: 50%; background: var(--accent);"></div>
           </div>
         `;
       }
@@ -139,14 +139,14 @@ export const ShipmentMap: React.FC<ShipmentMapProps> = ({
       // Popup content
       const popupHtml = `
         <div style="font-family: Inter, sans-serif; min-width: 180px; padding: 2px 0;">
-          <div style="font-weight: 700; color: #edecec; font-size: 13px; margin-bottom: 3px;">
+          <div style="font-weight: 700; color: var(--text); font-size: 13px; margin-bottom: 3px;">
             ${pt.name}
           </div>
-          <div style="font-size: 11px; color: #c08532; font-weight: 600; text-transform: uppercase; margin-bottom: 4px;">
+          <div style="font-size: 11px; color: var(--accent); font-weight: 600; text-transform: uppercase; margin-bottom: 4px;">
             ${pt.isLatest ? "📍 Latest Update" : pt.isOrigin ? "🛫 Origin Hub" : pt.isDestination ? "🎯 Destination" : "Transit Milestone"}
           </div>
-          ${pt.statusText ? `<div style="font-size: 12px; color: #edecec; margin-bottom: 2px;">${pt.statusText}</div>` : ""}
-          ${pt.time ? `<div style="font-size: 10px; color: rgba(237, 236, 236, 0.45); font-family: monospace;">${pt.time}</div>` : ""}
+          ${pt.statusText ? `<div style="font-size: 12px; color: var(--text); margin-bottom: 2px;">${pt.statusText}</div>` : ""}
+          ${pt.time ? `<div style="font-size: 10px; color: var(--text-3); font-family: monospace;">${pt.time}</div>` : ""}
         </div>
       `;
 
@@ -202,6 +202,7 @@ export const ShipmentMap: React.FC<ShipmentMapProps> = ({
 
   return (
     <div
+      className="shipment-map"
       style={{
         background: "var(--color-bg-2)",
         borderRadius: "var(--radius)",
@@ -212,6 +213,7 @@ export const ShipmentMap: React.FC<ShipmentMapProps> = ({
     >
       {/* Map Header */}
       <div
+        className="map-header"
         style={{
           display: "flex",
           alignItems: "center",
@@ -269,6 +271,7 @@ export const ShipmentMap: React.FC<ShipmentMapProps> = ({
       {/* Map Content Box */}
       <div
         ref={mapContainerRef}
+        className="map-canvas"
         style={{
           width: "100%",
           height: typeof height === "number" ? `${height}px` : height,
@@ -286,7 +289,7 @@ export const ShipmentMap: React.FC<ShipmentMapProps> = ({
               alignItems: "center",
               justifyContent: "center",
               gap: 12,
-              background: "rgba(20, 18, 11, 0.8)",
+              background: "var(--map-loading-bg, rgba(20, 18, 11, 0.8))",
               zIndex: 1000,
             }}
           >

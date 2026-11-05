@@ -64,6 +64,7 @@ export const SearchHero: React.FC<SearchHeroProps> = ({
         <form onSubmit={handleSubmit} className="search-box" style={{ paddingLeft: 12 }}>
           {/* Integrated Carrier Dropdown inside the search bar line */}
           <div
+            className="search-carrier"
             style={{
               display: "flex",
               alignItems: "center",
@@ -100,8 +101,8 @@ export const SearchHero: React.FC<SearchHeroProps> = ({
                   key={tab.id}
                   value={tab.id}
                   style={{
-                    background: "#14120b",
-                    color: "#edecec",
+                    background: "var(--bg)",
+                    color: "var(--text)",
                   }}
                 >
                   {tab.name}

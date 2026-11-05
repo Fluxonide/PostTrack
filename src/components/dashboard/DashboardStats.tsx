@@ -26,6 +26,7 @@ export const DashboardStats: React.FC<DashboardStatsProps> = ({
 }) => {
   return (
     <div
+      className="dashboard-stats"
       style={{
         display: "grid",
         gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
