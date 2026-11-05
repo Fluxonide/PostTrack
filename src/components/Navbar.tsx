@@ -1,5 +1,13 @@
-import React from "react";
-import { FaUser, FaTelegramPlane, FaSignOutAlt, FaSun, FaMoon } from "react-icons/fa";
+import React, { useEffect, useState } from "react";
+import {
+  FaUser,
+  FaTelegramPlane,
+  FaSignOutAlt,
+  FaSun,
+  FaMoon,
+  FaBars,
+  FaTimes,
+} from "react-icons/fa";
 import { useAuth } from "../lib/authContext";
 import { useTheme } from "../lib/themeContext";
 
@@ -24,6 +32,41 @@ export const Navbar: React.FC<NavbarProps> = ({
 }) => {
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const [mobileOpen, setMobileOpen] = useState(false);
+
+  // Close the mobile menu when the viewport grows back to desktop size.
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 641px)");
+    const handleChange = () => {
+      if (mq.matches) setMobileOpen(false);
+    };
+    mq.addEventListener("change", handleChange);
+    return () => mq.removeEventListener("change", handleChange);
+  }, []);
+
+  // Close on Escape or when tapping outside the menu.
+  useEffect(() => {
+    if (!mobileOpen) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setMobileOpen(false);
+    };
+    const handlePointerDown = (event: PointerEvent) => {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      if (target.closest(".nav-mobile-menu") || target.closest(".nav-mobile-toggle")) return;
+      setMobileOpen(false);
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    document.addEventListener("pointerdown", handlePointerDown);
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+      document.removeEventListener("pointerdown", handlePointerDown);
+    };
+  }, [mobileOpen]);
+
+  const closeMobile = () => setMobileOpen(false);
 
   return (
     <nav>
@@ -34,6 +77,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           onClick={(e) => {
             e.preventDefault();
             onSelectView("tracker");
+            closeMobile();
           }}
           style={{ color: "var(--text)", textDecoration: "none" }}
         >
@@ -42,7 +86,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         <span className="nav-badge">v1.0</span>
       </div>
 
-      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+      <div className="nav-actions">
         <ul className="nav-links">
           <li>
             <a
@@ -181,7 +225,116 @@ export const Navbar: React.FC<NavbarProps> = ({
         >
           {theme === "dark" ? <FaSun size={15} /> : <FaMoon size={15} />}
         </button>
+
+        {/* Mobile menu toggle */}
+        <button
+          type="button"
+          className="nav-mobile-toggle"
+          onClick={() => setMobileOpen((open) => !open)}
+          aria-label={mobileOpen ? "Close navigation menu" : "Open navigation menu"}
+          aria-expanded={mobileOpen}
+        >
+          {mobileOpen ? <FaTimes size={16} /> : <FaBars size={16} />}
+        </button>
       </div>
+
+      {mobileOpen && (
+        <div className="nav-mobile-menu" role="menu">
+          <button
+            type="button"
+            role="menuitem"
+            className={activeView === "tracker" ? "active" : ""}
+            onClick={() => {
+              onSelectView("tracker");
+              closeMobile();
+            }}
+          >
+            Tracker
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            className={activeView === "dashboard" ? "active" : ""}
+            onClick={() => {
+              closeMobile();
+              if (!user) {
+                onOpenAuth();
+              } else {
+                onSelectView("dashboard");
+              }
+            }}
+          >
+            Dashboard
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => {
+              closeMobile();
+              onOpenCarriers();
+            }}
+          >
+            Carriers
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => {
+              closeMobile();
+              onOpenHistory();
+            }}
+          >
+            Recent {historyCount > 0 ? `(${historyCount})` : ""}
+          </button>
+
+          <div className="nav-mobile-divider" />
+
+          {user ? (
+            <>
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  closeMobile();
+                  onOpenTelegram();
+                }}
+              >
+                <FaTelegramPlane size={13} />
+                {user.telegramConnected ? "Telegram Alerts On" : "Connect Telegram"}
+              </button>
+              <div className="nav-mobile-user">
+                <span>
+                  <FaUser size={11} style={{ color: "var(--accent)" }} />
+                  {user.username}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    closeMobile();
+                    logout();
+                  }}
+                  title="Log Out"
+                >
+                  <FaSignOutAlt size={12} />
+                  Log out
+                </button>
+              </div>
+            </>
+          ) : (
+            <button
+              type="button"
+              role="menuitem"
+              className="nav-mobile-signin"
+              onClick={() => {
+                closeMobile();
+                onOpenAuth();
+              }}
+            >
+              Sign In
+            </button>
+          )}
+        </div>
+      )}
     </nav>
   );
 };

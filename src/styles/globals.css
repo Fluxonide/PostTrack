@@ -2498,3 +2498,482 @@ main {
   color: var(--accent) !important;
 }
 
+
+/* ===================================================================
+   MOBILE RESPONSIVENESS
+   =================================================================== */
+
+.nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.nav-mobile-toggle {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text);
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.nav-mobile-menu {
+  display: none;
+}
+
+@media (max-width: 640px) {
+  /* ── Navigation ── */
+  nav {
+    padding: 12px 16px;
+  }
+
+  .nav-actions {
+    gap: 8px;
+  }
+
+  .nav-mobile-toggle {
+    display: flex;
+  }
+
+  .nav-mobile-menu {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 16px;
+    right: 16px;
+    padding: 8px;
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-card);
+    z-index: 101;
+  }
+
+  .nav-mobile-menu button {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 11px 12px;
+    background: transparent;
+    border: none;
+    border-radius: var(--radius-sm);
+    color: var(--text-2);
+    font-family: var(--sans);
+    font-size: 14px;
+    font-weight: 500;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .nav-mobile-menu button:hover,
+  .nav-mobile-menu button.active {
+    background: var(--surface-hover);
+    color: var(--text);
+  }
+
+  .nav-mobile-divider {
+    height: 1px;
+    margin: 6px 4px;
+    background: var(--border);
+  }
+
+  .nav-mobile-menu .nav-mobile-signin {
+    justify-content: center;
+    background: var(--accent);
+    color: var(--accent-contrast, #ffffff);
+    font-weight: 600;
+  }
+
+  .nav-mobile-menu .nav-mobile-signin:hover {
+    background: var(--accent-2);
+    color: var(--accent-contrast, #ffffff);
+  }
+
+  .nav-mobile-user {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 8px 12px 4px;
+    color: var(--text-2);
+    font-size: 13px;
+  }
+
+  .nav-mobile-user span {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .nav-mobile-menu .nav-mobile-user button {
+    width: auto;
+    flex-shrink: 0;
+    padding: 6px 8px;
+    color: var(--text-3);
+    font-size: 12px;
+  }
+
+  /* ── Hero & search ── */
+  .hero {
+    padding: 36px 16px 32px;
+  }
+
+  .hero h1 {
+    letter-spacing: -1.2px;
+  }
+
+  .hero-sub {
+    font-size: 14px;
+    margin-bottom: 28px;
+  }
+
+  main {
+    padding: 0 16px 48px;
+  }
+
+  .search-box {
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 10px !important;
+  }
+
+  .search-carrier {
+    flex: 1 1 100% !important;
+    width: 100%;
+    padding: 0 0 8px !important;
+    margin: 0 !important;
+    border-right: none !important;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .search-carrier select {
+    width: 100%;
+    padding: 6px 20px 6px 2px !important;
+    font-size: 16px !important;
+  }
+
+  .search-box > .search-icon {
+    display: none;
+  }
+
+  #search-input {
+    flex: 1 1 100px;
+    min-width: 0;
+    padding: 8px 0;
+    font-size: 16px;
+  }
+
+  .search-btn {
+    padding: 10px 16px;
+    font-size: 14px;
+  }
+
+  /* ── Tracking status bar ── */
+  .status-bar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    padding: 14px;
+  }
+
+  .status-info {
+    gap: 6px;
+    font-size: 12px;
+  }
+
+  /* Hide the decorative bullets so wrapped status lines stay clean. */
+  .status-sep {
+    display: none;
+  }
+
+  .status-actions {
+    width: 100%;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .status-actions .export-btn {
+    flex: 1 1 auto;
+    justify-content: center;
+    padding: 8px 10px;
+  }
+
+  /* ── Result cards ── */
+  .result-card {
+    padding: 14px;
+    gap: 12px;
+  }
+
+  .result-title {
+    white-space: normal;
+    word-break: break-word;
+  }
+
+  .result-filter-divider {
+    padding: 8px 10px;
+  }
+
+  .divider-input {
+    font-size: 16px;
+  }
+
+  .filter-divider-meta {
+    font-size: 10px;
+  }
+
+  .modal-stats .stat-card:first-child .stat-num {
+    font-size: 13px !important;
+    line-height: 1.35;
+  }
+
+  .carrier-sample-btn {
+    width: 100%;
+    margin-left: 0 !important;
+    margin-top: 10px;
+  }
+
+  /* ── Journey progress: horizontal stepper becomes a vertical timeline ── */
+  .journey-progress {
+    margin: 20px 0 !important;
+    padding: 16px 14px !important;
+  }
+
+  .journey-progress > div:first-child {
+    margin-bottom: 14px !important;
+  }
+
+  .journey-steps {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    justify-content: flex-start !important;
+  }
+
+  .journey-step {
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 12px;
+    width: 100% !important;
+  }
+
+  .journey-step-circle {
+    width: 32px !important;
+    height: 32px !important;
+  }
+
+  .journey-step-label {
+    width: auto !important;
+    margin-top: 0 !important;
+    text-align: left !important;
+    font-size: 12px !important;
+    line-height: 1.3 !important;
+  }
+
+  .journey-connector {
+    width: 2px !important;
+    height: 16px !important;
+    flex: 0 0 16px !important;
+    align-self: flex-start !important;
+    margin: 0 0 0 15px !important;
+  }
+
+  /* ── Map ── */
+  .map-header {
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 10px 12px !important;
+  }
+
+  .map-canvas {
+    height: 240px !important;
+  }
+
+  /* ── Dashboard ── */
+  .dashboard-view {
+    padding: 18px 0 40px !important;
+  }
+
+  .dashboard-stats {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 10px !important;
+    margin-bottom: 18px !important;
+  }
+
+  .dashboard-stats .stat-card {
+    padding: 12px 14px !important;
+  }
+
+  .dashboard-stats > :last-child {
+    grid-column: 1 / -1;
+  }
+
+  .dashboard-toolbar {
+    flex-direction: column;
+    align-items: stretch !important;
+    gap: 10px !important;
+  }
+
+  .dashboard-filters {
+    width: 100%;
+  }
+
+  .dashboard-filters button {
+    flex: 1;
+    padding: 8px 6px !important;
+    white-space: nowrap;
+  }
+
+  .dashboard-toolbar-actions {
+    width: 100%;
+  }
+
+  .dashboard-toolbar-actions button {
+    flex: 1;
+    justify-content: center;
+  }
+
+  /* ── Shipment cards ── */
+  .shipment-card {
+    padding: 14px !important;
+  }
+
+  .shipment-card-header {
+    gap: 10px !important;
+  }
+
+  .shipment-card-main {
+    flex: 1 1 200px;
+    min-width: 0;
+  }
+
+  .shipment-tracking-number {
+    word-break: break-all;
+  }
+
+  .shipment-label-edit {
+    flex-wrap: wrap;
+    width: 100%;
+  }
+
+  .shipment-label-edit input {
+    flex: 1 1 140px;
+    min-width: 0;
+    font-size: 16px !important;
+  }
+
+  .shipment-card-actions {
+    flex-direction: column;
+    align-items: stretch !important;
+    gap: 12px !important;
+  }
+
+  .shipment-card-buttons {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .shipment-card-buttons button {
+    flex: 1 1 auto;
+    justify-content: center;
+  }
+
+  .shipment-auto-check {
+    align-items: flex-start !important;
+    font-size: 11px !important;
+  }
+
+  .shipment-auto-check input {
+    margin-top: 2px;
+  }
+
+  /* ── Modals ── */
+  .modal-overlay {
+    padding: 12px;
+  }
+
+  .modal {
+    max-height: 92dvh;
+    overflow-y: auto;
+    padding: 18px !important;
+    border-radius: 16px;
+  }
+
+  .modal-header {
+    gap: 10px;
+  }
+
+  .modal-header .modal-title {
+    font-size: 16px !important;
+    line-height: 1.35;
+  }
+
+  .modal input,
+  .modal select,
+  .modal textarea {
+    font-size: 16px !important;
+  }
+
+  /* ── Toasts ── */
+  .toast-container {
+    left: 16px;
+    right: 16px;
+    bottom: 16px;
+  }
+
+  .toast {
+    width: 100%;
+    max-width: none;
+  }
+
+  /* ── Footer ── */
+  .site-footer {
+    padding: 20px 16px !important;
+  }
+
+  .site-footer-inner {
+    flex-direction: column;
+    text-align: center;
+    gap: 10px !important;
+  }
+}
+
+@media (max-width: 380px) {
+  .nav-badge {
+    display: none;
+  }
+
+  .hero h1 {
+    font-size: 34px;
+  }
+
+  .search-btn {
+    flex: 1 1 100%;
+    justify-content: center;
+  }
+
+  .status-actions .export-btn {
+    flex: 1 1 100%;
+  }
+
+  .shipment-card-buttons {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .shipment-card-buttons button {
+    width: 100%;
+  }
+}

@@ -105,6 +105,7 @@ export const JourneyProgress: React.FC<JourneyProgressProps> = ({ status, events
 
   return (
     <div
+      className="journey-progress"
       style={{
         margin: "24px 0 28px",
         padding: "20px 20px 18px",
@@ -134,6 +135,7 @@ export const JourneyProgress: React.FC<JourneyProgressProps> = ({ status, events
 
       {/* Stepper with independent segments between circles */}
       <div
+        className="journey-steps"
         style={{
           display: "flex",
           alignItems: "flex-start",
@@ -151,6 +153,7 @@ export const JourneyProgress: React.FC<JourneyProgressProps> = ({ status, events
             <React.Fragment key={step.id}>
               {/* Step Node */}
               <div
+                className="journey-step"
                 style={{
                   display: "flex",
                   flexDirection: "column",
@@ -161,6 +164,7 @@ export const JourneyProgress: React.FC<JourneyProgressProps> = ({ status, events
               >
                 {/* Solid Icon Circle - No line behind it */}
                 <div
+                  className="journey-step-circle"
                   style={{
                     width: 36,
                     height: 36,
@@ -188,6 +192,7 @@ export const JourneyProgress: React.FC<JourneyProgressProps> = ({ status, events
 
                 {/* Step Label */}
                 <span
+                  className="journey-step-label"
                   style={{
                     marginTop: 10,
                     fontSize: 11,
@@ -211,6 +216,7 @@ export const JourneyProgress: React.FC<JourneyProgressProps> = ({ status, events
               {/* Segment Connector joining Circle A to Circle B */}
               {!isLast && (
                 <div
+                  className="journey-connector"
                   style={{
                     flex: 1,
                     height: 2,

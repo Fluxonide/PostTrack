@@ -86,7 +86,7 @@ export const CarriersModal: React.FC<CarriersModalProps> = ({
                 {c.sampleTracking && (
                   <button
                     type="button"
-                    className="action-btn primary"
+                    className="action-btn primary carrier-sample-btn"
                     onClick={() => {
                       onSelectSample(c.id, c.sampleTracking!);
                       onClose();

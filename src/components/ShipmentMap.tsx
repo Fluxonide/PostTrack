@@ -202,6 +202,7 @@ export const ShipmentMap: React.FC<ShipmentMapProps> = ({
 
   return (
     <div
+      className="shipment-map"
       style={{
         background: "var(--color-bg-2)",
         borderRadius: "var(--radius)",
@@ -212,6 +213,7 @@ export const ShipmentMap: React.FC<ShipmentMapProps> = ({
     >
       {/* Map Header */}
       <div
+        className="map-header"
         style={{
           display: "flex",
           alignItems: "center",
@@ -269,6 +271,7 @@ export const ShipmentMap: React.FC<ShipmentMapProps> = ({
       {/* Map Content Box */}
       <div
         ref={mapContainerRef}
+        className="map-canvas"
         style={{
           width: "100%",
           height: typeof height === "number" ? `${height}px` : height,

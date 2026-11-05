@@ -151,7 +151,7 @@ export const TrackingCard: React.FC<TrackingCardProps> = ({
         <div className="status-info" style={{ flexWrap: "wrap" }}>
           <span>Carrier:</span>
           <span className="status-count">{result.carrierName || result.carrier}</span>
-          <span>•</span>
+          <span className="status-sep">•</span>
           <span>AWB:</span>
           <button
             type="button"
@@ -185,7 +185,7 @@ export const TrackingCard: React.FC<TrackingCardProps> = ({
               <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
             </svg>
           </button>
-          <span>•</span>
+          <span className="status-sep">•</span>
           <span>Status:</span>
           <span className="result-id" style={{ textTransform: "uppercase" }}>
             {humanStatus(result.status)}
@@ -193,7 +193,7 @@ export const TrackingCard: React.FC<TrackingCardProps> = ({
 
           {customLabel && !isEditingLabel && (
             <>
-              <span>•</span>
+              <span className="status-sep">•</span>
               <span className="result-prefix">{customLabel}</span>
             </>
           )}

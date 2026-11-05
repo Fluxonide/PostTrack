@@ -254,7 +254,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   });
 
   return (
-    <div style={{ maxWidth: 1040, margin: "0 auto", padding: "24px 20px" }}>
+    <div className="dashboard-view" style={{ maxWidth: 1040, margin: "0 auto", padding: "24px 20px" }}>
       {/* Top Banner / Stats */}
       <DashboardStats
         totalCount={totalCount}
@@ -266,6 +266,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
       {/* Action Toolbar */}
       <div
+        className="dashboard-toolbar"
         style={{
           display: "flex",
           justifyContent: "space-between",
@@ -276,7 +277,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         }}
       >
         {/* Filters */}
-        <div style={{ display: "flex", gap: 6, background: "var(--color-bg)", padding: 3, borderRadius: 8, border: "1px solid var(--border)" }}>
+        <div className="dashboard-filters" style={{ display: "flex", gap: 6, background: "var(--color-bg)", padding: 3, borderRadius: 8, border: "1px solid var(--border)" }}>
           <button onClick={() => setFilter("all")} style={filterBtnStyle(filter === "all")}>
             All ({totalCount})
           </button>
@@ -289,7 +290,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         </div>
 
         {/* Buttons */}
-        <div style={{ display: "flex", gap: 10 }}>
+        <div className="dashboard-toolbar-actions" style={{ display: "flex", gap: 10 }}>
           <button
             onClick={handleSyncAll}
             disabled={isRefreshingAll || shipments.length === 0}

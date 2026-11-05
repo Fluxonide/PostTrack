@@ -70,6 +70,7 @@ export const ShipmentCard: React.FC<ShipmentCardProps> = ({
 
   return (
     <div
+      className="shipment-card"
       style={{
         background: "var(--color-bg-2)",
         border: "1px solid var(--border)",
@@ -83,6 +84,7 @@ export const ShipmentCard: React.FC<ShipmentCardProps> = ({
     >
       {/* Row 1: Label / Tracking / Carrier / Status */}
       <div
+        className="shipment-card-header"
         style={{
           display: "flex",
           justifyContent: "space-between",
@@ -91,10 +93,10 @@ export const ShipmentCard: React.FC<ShipmentCardProps> = ({
           gap: 10,
         }}
       >
-        <div>
+        <div className="shipment-card-main">
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
             {isEditing ? (
-              <div style={{ display: "flex", gap: 6 }}>
+              <div className="shipment-label-edit" style={{ display: "flex", gap: 6 }}>
                 <input
                   type="text"
                   value={labelText}
@@ -177,7 +179,7 @@ export const ShipmentCard: React.FC<ShipmentCardProps> = ({
             >
               {shipment.carrier}
             </span>
-            <span style={{ color: "var(--text-2)" }}>{shipment.trackingNumber}</span>
+            <span className="shipment-tracking-number" style={{ color: "var(--text-2)" }}>{shipment.trackingNumber}</span>
             <button
               onClick={() => onCopy(shipment.id, shipment.trackingNumber)}
               style={{
@@ -305,6 +307,7 @@ export const ShipmentCard: React.FC<ShipmentCardProps> = ({
 
       {/* Row 3: Action Controls */}
       <div
+        className="shipment-card-actions"
         style={{
           display: "flex",
           alignItems: "center",
@@ -316,6 +319,7 @@ export const ShipmentCard: React.FC<ShipmentCardProps> = ({
       >
         {/* Auto Check Toggle */}
         <label
+          className="shipment-auto-check"
           style={{
             display: "flex",
             alignItems: "center",
@@ -335,7 +339,7 @@ export const ShipmentCard: React.FC<ShipmentCardProps> = ({
         </label>
 
         {/* Action Buttons */}
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <div className="shipment-card-buttons" style={{ display: "flex", alignItems: "center", gap: 8 }}>
           {shipment.cachedResult && (
             <button
               onClick={() => onViewTimeline(shipment)}

@@ -257,6 +257,7 @@ function AppContent() {
 
       {/* Footer */}
       <footer
+        className="site-footer"
         style={{
           borderTop: "1px solid var(--border)",
           padding: "24px 40px",
@@ -268,6 +269,7 @@ function AppContent() {
         }}
       >
         <div
+          className="site-footer-inner"
           style={{
             maxWidth: 1040,
             margin: "0 auto",
